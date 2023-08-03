@@ -11,16 +11,16 @@ external_components:
     refresh: 10 min
 
 device_groups:
-  - id: "testgroup1" # devgroupname
+  - id: "testgroup1"     # Tasmota device group name
     switches:
-      - gpio_switch # ESPHome id
-      - template_switch
+      - gpio_switch      # ESPHome entity id
+      - template_switch  # ESPHome entity id
     lights:
-      - light_rgbww1
-      - light_rgbww2
-  - id: "testgroup2" # devgroupname
+      - light_rgbww1     # ESPHome entity id
+      - light_rgbww2     # ESPHome entity id
+  - id: "testgroup2"     # Tasmota device group name
     switches:
-      - gpio_switch2
+      - gpio_switch2     # ESPHome entity id
 ```
 
 ### Supported:
