@@ -24,8 +24,8 @@ device_groups:
 ```
 
 ### Supported:
-* Power State
-* Light Ste
+* Power States
+* Light States
   * On/Off
   * Brightness
   * Color channels
