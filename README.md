@@ -5,6 +5,11 @@ This repository is for an external component for ESPHome to add (limited) Tasmot
 Configuration for ESPHome is opt-in instead of automatic.  The reason for this is detached entities are not a special flag, and we don't want to attach to anything meant to be detached.
 
 ```yaml
+external_components:
+  - source: github://cossid/tasmotadevicegroupsforesphome@main
+    components: [ device_groups ]
+    refresh: 10 min
+
 device_groups:
   - id: "testgroup" # devgroupname
     switches:
