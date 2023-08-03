@@ -11,14 +11,14 @@ external_components:
     refresh: 10 min
 
 device_groups:
-  - id: "testgroup" # devgroupname
+  - id: "testgroup1" # devgroupname
     switches:
       - gpio_switch # ESPHome id
       - template_switch
     lights:
       - light_rgbww1
       - light_rgbww2
-  - id: "testdgr2" # devgroupname
+  - id: "testgroup2" # devgroupname
     switches:
       - gpio_switch2
 ```
