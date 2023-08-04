@@ -20,6 +20,7 @@ TSettings *Settings = nullptr;
 TasmotaGlobal_t TasmotaGlobal;
 XDRVMAILBOX XdrvMailbox;
 DevGroupState dgr_state = DGR_STATE_UNINTIALIZED;
+bool setup_complete = false;
 
 uint8_t device_group_count = 0;
 bool first_device_group_is_local = true;
@@ -116,6 +117,8 @@ void device_groups::dump_config() {
 #else
   ESP_LOGCONFIG(TAG, "Lights not configured");
 #endif
+
+  setup_complete = true;
 }
 
 void device_groups::loop() {
@@ -123,6 +126,10 @@ void device_groups::loop() {
     return;
 
   if (!network::is_connected()) {
+    return;
+  }
+
+  if (!setup_complete) {
     return;
   }
 
