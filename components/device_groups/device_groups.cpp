@@ -137,8 +137,9 @@ void device_groups::loop() {
     dgr_state = DGR_STATE_INITIALIZING;
     InitTasmotaCompatibility();
     // DeviceGroupsInit(); // automatically called by DeviceGrupsStart()
-    DeviceGroupsStart();
-    dgr_state = DGR_STATE_INITIALIZED;
+    if (DeviceGroupsStart()) {
+      dgr_state = DGR_STATE_INITIALIZED;
+    }
   }
 
   if (dgr_state != DGR_STATE_INITIALIZED) {
@@ -207,7 +208,7 @@ void device_groups::DeviceGroupsInit() {
   device_groups_initialized = true;
 }
 
-void device_groups::DeviceGroupsStart() {
+bool device_groups::DeviceGroupsStart() {
   if (Settings->flag4.device_groups_enabled && !device_groups_up && !TasmotaGlobal.restart_flag) {
     // If we haven't successfuly initialized device groups yet, attempt to do it now.
     if (!device_groups_initialized) {
@@ -220,12 +221,12 @@ void device_groups::DeviceGroupsStart() {
 #ifdef ESP8266
     if (!device_groups_udp.beginMulticast(WiFi.localIP(), IPAddress(DEVICE_GROUPS_ADDRESS), DEVICE_GROUPS_PORT)) {
       ESP_LOGE(TAG, "Error subscribing");
-      return;
+      return false;
     }
 #else
     if (!device_groups_udp.beginMulticast(IPAddress(DEVICE_GROUPS_ADDRESS), DEVICE_GROUPS_PORT)) {
       ESP_LOGE(TAG, "Error subscribing");
-      return;
+      return false;
     }
 #endif
     device_groups_up = true;
@@ -244,6 +245,8 @@ void device_groups::DeviceGroupsStart() {
       device_group->next_ack_check_time = next_check_time;
     }
     ESP_LOGD(TAG, "(Re)discovering members");
+
+    return true;
   }
 }
 

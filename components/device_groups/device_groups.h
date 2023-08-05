@@ -268,7 +268,7 @@ class device_groups : public Component {
   void ExecuteCommand(const char *cmnd, uint32_t source);
   void InitTasmotaCompatibility();
   void DeviceGroupsInit();
-  void DeviceGroupsStart();
+  bools DeviceGroupsStart();
   void DeviceGroupsLoop();
   void DeviceGroupsStop();
 
