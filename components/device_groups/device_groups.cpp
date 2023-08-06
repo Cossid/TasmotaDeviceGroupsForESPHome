@@ -214,7 +214,7 @@ bool device_groups::DeviceGroupsStart() {
     if (!device_groups_initialized) {
       DeviceGroupsInit();
       if (!device_groups_initialized)
-        return;
+        return false;
     }
 
     // Subscribe to device groups multicasts.
