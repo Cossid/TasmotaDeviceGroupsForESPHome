@@ -139,6 +139,8 @@ void device_groups::loop() {
     // DeviceGroupsInit(); // automatically called by DeviceGrupsStart()
     if (DeviceGroupsStart()) {
       dgr_state = DGR_STATE_INITIALIZED;
+    } else {
+      dgr_state = DGR_STATE_UNINTIALIZED;
     }
   }
 
