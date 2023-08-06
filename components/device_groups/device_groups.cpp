@@ -245,9 +245,9 @@ bool device_groups::DeviceGroupsStart() {
       device_group->next_ack_check_time = next_check_time;
     }
     ESP_LOGD(TAG, "(Re)discovering members");
-
-    return true;
   }
+
+  return true;
 }
 
 void device_groups::DeviceGroupsStop() {
