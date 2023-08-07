@@ -36,6 +36,49 @@ device_groups:
 * Schemes
 * Commands (ESPHome doesn't have a direct equivalent)
 
+### Command alternative
+Since commands are not implemented, the suggested workaround is to make internal matching entites backed by templates to what you want to change, add that internal entity to your group, and set the desired state on that entity.
+
+For example, if you have a switch with a button and would like to control a light entity, you could use:
+```yaml
+output:
+  - platform: template
+    id: dummy_output
+    type: float
+    write_action:
+      - lambda: return;
+
+light:
+  - platform: rgbww
+    id: internal_light
+    color_interlock: true
+    cold_white_color_temperature: 6500 K
+    warm_white_color_temperature: 2700 K
+    red: dummy_output
+    green: dummy_output
+    blue: dummy_output
+    cold_white: dummy_output
+    warm_white: dummy_output
+
+button:
+  - platform: template
+    name: "Set light to red"
+    on_press:
+      - light.control:
+          id: internal_light
+          state: on
+          red: 100%
+          green: 0%
+          blue: 0%
+
+device_groups:
+  - id: "light_group"    # Tasmota device group name
+    lights:
+      - internal_light   # ESPHome entity id
+```
+
+Button is just an example, but you could hook into any of the `on_` events for `binary_sensor`, `button`, `switch`, etc.
+
 ### Misc:
 You may see a notice about blocking for too long.  This should not really be a problem, it is a generic ESPHome notice about performance.  Delays are mostly caused by waiting on network traffic.  The notice will look like this:
 ```
