@@ -21,7 +21,8 @@ CONF_RECEIVE_MASK = "receive_mask"
 
 CONFIG_SCHEMA = cv.Schema(
     {
-        cv.Required(CONF_GROUP_NAME): cv.declare_id(device_groups),
+        cv.GenerateID(CONF_ID): cv.declare_id(device_groups),
+        cv.Required(CONF_GROUP_NAME): cv.string,
         cv.Optional(CONF_SWITCHES): cv.All(cv.ensure_list(cv.use_id(switch.Switch)), cv.Length(min=1)),
         cv.Optional(CONF_LIGHTS): cv.All(cv.ensure_list(cv.use_id(light.LightState)), cv.Length(min=1)),
         cv.Optional(CONF_SEND_MASK, default=0xFFFFFFFF): cv.hex_uint32_t,
@@ -31,7 +32,7 @@ CONFIG_SCHEMA = cv.Schema(
 
 
 async def to_code(config):
-    var = cg.new_Pvariable(config[CONF_GROUP_NAME])
+    var = cg.new_Pvariable(config[CONF_ID])
     await cg.register_component(var, config)
     cg.add(var.register_device_group_name(str(config[CONF_GROUP_NAME])))
     cg.add(var.register_send_mask(config[CONF_SEND_MASK]))
