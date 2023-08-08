@@ -9,21 +9,7 @@ namespace device_groups {
 
 static const char *const TAG = "dgr";
 
-WiFiUDP device_groups_udp;
-struct device_group *device_groups_;
-uint32_t next_check_time;
-bool device_groups_initialized = false;
-bool device_groups_up = false;
-bool building_status_message = false;
-bool ignore_dgr_sends = false;
-TSettings *Settings = nullptr;
-TasmotaGlobal_t TasmotaGlobal;
-XDRVMAILBOX XdrvMailbox;
-DevGroupState dgr_state = DGR_STATE_UNINTIALIZED;
-bool setup_complete = false;
 
-uint8_t device_group_count = 0;
-bool first_device_group_is_local = true;
 
 char *IPAddressToString(const IPAddress &ip_address) {
   static char buffer[16];
@@ -1238,7 +1224,11 @@ void device_groups::ExecuteCommandPower(uint32_t device, uint32_t state, uint32_
 
 #ifdef USE_SWITCH
   for (switch_::Switch *obj : this->switches_) {
-    obj->publish_state(TasmotaGlobal.power);
+    //obj->publish_state(TasmotaGlobal.power);
+    if (TasmotaGlobal.power > 0)
+      obj->turn_on();
+    else
+      obj->turn_off();
   }
 #endif
 #ifdef USE_LIGHT

@@ -259,11 +259,11 @@ class device_groups : public Component {
   void loop() override;
 
  protected:
-  void SendReceiveDeviceGroupMessage(struct device_group *device_group,
-                                                    struct device_group_member *device_group_member, uint8_t *message,
-                                                    int message_length, bool received);
+  void SendReceiveDeviceGroupMessage(struct device_group *device_group, struct device_group_member *device_group_member,
+                                     uint8_t *message, int message_length, bool received);
   bool _SendDeviceGroupMessage(int32_t device, DevGroupMessageType message_type, ...);
-#define SendDeviceGroupMessage(DEVICE_INDEX, REQUEST_TYPE, ...) _SendDeviceGroupMessage(DEVICE_INDEX, REQUEST_TYPE, ##__VA_ARGS__, 0)
+#define SendDeviceGroupMessage(DEVICE_INDEX, REQUEST_TYPE, ...) \
+  _SendDeviceGroupMessage(DEVICE_INDEX, REQUEST_TYPE, ##__VA_ARGS__, 0)
   void ProcessDeviceGroupMessage(uint8_t *message, int message_length);
   bool XdrvCall(uint8_t Function);
   void ExecuteCommandPower(uint32_t device, uint32_t state, uint32_t source);
@@ -285,6 +285,22 @@ class device_groups : public Component {
 #ifdef USE_LIGHT
   std::vector<light::LightState *> lights_{};
 #endif
+
+  WiFiUDP device_groups_udp;
+  struct device_group *device_groups_;
+  uint32_t next_check_time;
+  bool device_groups_initialized = false;
+  bool device_groups_up = false;
+  bool building_status_message = false;
+  bool ignore_dgr_sends = false;
+  TSettings *Settings = nullptr;
+  TasmotaGlobal_t TasmotaGlobal;
+  XDRVMAILBOX XdrvMailbox;
+  DevGroupState dgr_state = DGR_STATE_UNINTIALIZED;
+  bool setup_complete = false;
+
+  uint8_t device_group_count = 0;
+  bool first_device_group_is_local = true;
 };
 
 }  // namespace device_groups
