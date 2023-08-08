@@ -646,7 +646,7 @@ bool device_groups::_SendDeviceGroupMessage(int32_t device, DevGroupMessageType 
   if (device_group->initial_status_requests_remaining)
     return 1;
 
-  // Load the message header, sequence and flags.
+    // Load the message header, sequence and flags.
 #ifdef DEVICE_GROUPS_DEBUG
   ESP_LOGD(TAG, "Building %s %spacket", device_group->group_name,
            (message_type == DGR_MSGTYP_FULL_STATUS ? "full status " : ""));
@@ -1041,7 +1041,7 @@ void device_groups::ProcessDeviceGroupMessage(uint8_t *message, int message_leng
   SendReceiveDeviceGroupMessage(device_group, device_group_member, message, message_length, true);
 }
 
-void DeviceGroupStatus(uint8_t device_group_index) {
+void device_groups::DeviceGroupStatus(uint8_t device_group_index) {
   if (Settings->flag4.device_groups_enabled && device_group_index < device_group_count) {
     char buffer[1024];
     int member_count = 0;

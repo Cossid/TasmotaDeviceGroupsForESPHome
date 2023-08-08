@@ -273,6 +273,7 @@ class device_groups : public Component {
   bool DeviceGroupsStart();
   void DeviceGroupsLoop();
   void DeviceGroupsStop();
+  void DeviceGroupStatus(uint8_t device_group_index);
 
   const char *device_group_name_;
   bool update_{true};
