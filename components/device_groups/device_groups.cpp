@@ -93,6 +93,8 @@ void device_groups::setup() {
 }
 void device_groups::dump_config() {
   ESP_LOGCONFIG(TAG, "Device Group %s configuration:", this->device_group_name_);
+  ESP_LOGCONFIG(TAG, " - Send Mask: 0x%08x", send_mask_);
+  ESP_LOGCONFIG(TAG, " - Receive Mask: 0x%08x", receive_mask_);
 #ifdef USE_SWITCH
   ESP_LOGCONFIG(TAG, "Switches:");
   if (this->switches_.empty()) {
@@ -1251,8 +1253,8 @@ void device_groups::ExecuteCommand(const char *cmnd, uint32_t source) { return; 
 
 void device_groups::InitTasmotaCompatibility() {
   Settings = (TSettings *) malloc(sizeof(TSettings));
-  Settings->device_group_share_in = 0xFFFFFFFF;
-  Settings->device_group_share_out = 0xFFFFFFFF;
+  Settings->device_group_share_in = send_mask_;
+  Settings->device_group_share_out = receive_mask_;
   Settings->flag4.device_groups_enabled = 1;
   Settings->flag4.multiple_device_groups = 0;
 }

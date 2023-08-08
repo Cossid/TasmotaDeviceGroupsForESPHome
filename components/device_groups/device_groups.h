@@ -249,6 +249,8 @@ class device_groups : public Component {
 #ifdef USE_LIGHT
   void register_lights(const std::vector<light::LightState *> &lights) { this->lights_ = lights; }
 #endif
+  void register_send_mask(uint32_t send_mask) { this->send_mask_ = send_mask; }
+  void register_receive_mask(uint32_t receive_mask) { this->receive_mask_ = receive_mask; }
   void setup() override;
   void dump_config() override;
   float get_setup_priority() const override { return setup_priority::HARDWARE; }
@@ -274,6 +276,8 @@ class device_groups : public Component {
 
   const char *device_group_name_;
   bool update_{true};
+  uint32_t send_mask_{0xffffffff};
+  uint32_t receive_mask_{0xffffffff};
 
 #ifdef USE_SWITCH
   std::vector<switch_::Switch *> switches_{};
