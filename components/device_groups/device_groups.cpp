@@ -593,7 +593,7 @@ write_log:
   if (received) {
     if ((flags & DGR_FLAG_STATUS_REQUEST)) {
       if ((flags & DGR_FLAG_RESET) || device_group_member->acked_sequence != device_group->last_full_status_sequence) {
-        SendDeviceGroupMessage(-device_group_index, DGR_MSGTYP_FULL_STATUS);
+        _SendDeviceGroupMessage(-device_group_index, DGR_MSGTYP_FULL_STATUS);
       }
     }
   }
@@ -662,7 +662,7 @@ bool device_groups::_SendDeviceGroupMessage(int32_t device, DevGroupMessageType 
   if (device_group->initial_status_requests_remaining)
     return 1;
 
-    // Load the message header, sequence and flags.
+  // Load the message header, sequence and flags.
 #ifdef DEVICE_GROUPS_DEBUG
   ESP_LOGD(TAG, "Building %s %spacket", device_group->group_name,
            (message_type == DGR_MSGTYP_FULL_STATUS ? "full status " : ""));
@@ -779,7 +779,7 @@ bool device_groups::_SendDeviceGroupMessage(int32_t device, DevGroupMessageType 
           if (item == DGR_ITEM_STATUS) {
             if (!(item_ptr->flags & DGR_ITEM_FLAG_NO_SHARE))
               device_group->no_status_share = 0;
-            SendDeviceGroupMessage(-device_group_index, DGR_MSGTYP_FULL_STATUS);
+            _SendDeviceGroupMessage(-device_group_index, DGR_MSGTYP_FULL_STATUS);
             item_ptr--;
           }
         } else {
@@ -1126,7 +1126,7 @@ void device_groups::DeviceGroupsLoop(void) {
             // If we've sent the initial status request message the set number of times, send our
             // status to all the members.
             else {
-              SendDeviceGroupMessage(-device_group_index, DGR_MSGTYP_FULL_STATUS);
+              _SendDeviceGroupMessage(-device_group_index, DGR_MSGTYP_FULL_STATUS);
             }
           }
 
