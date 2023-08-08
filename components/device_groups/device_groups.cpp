@@ -1030,7 +1030,7 @@ void device_groups::ProcessDeviceGroupMessage(uint8_t *message, int message_leng
       device_group_member->acked_sequence = device_group->outgoing_sequence;
       device_group->member_timeout_time = millis() + DGR_MEMBER_TIMEOUT;
       *flink = device_group_member;
-      ESP_LOGD(TAG, "Member %s added", IPAddressToString(remote_ip));
+      ESP_LOGD(TAG, "%s Member %s added", device_group->group_name, IPAddressToString(remote_ip));
       break;
     } else if (device_group_member->ip_address == remote_ip) {
       break;
@@ -1130,7 +1130,7 @@ void device_groups::DeviceGroupsLoop(void) {
                 if ((int32_t) (now - device_group->member_timeout_time) >= 0) {
                   *flink = device_group_member->flink;
                   free(device_group_member);
-                  ESP_LOGD(TAG, "Member %s removed", IPAddressToString(device_group_member->ip_address));
+                  ESP_LOGD(TAG, "%s Member %s removed", device_group->group_name, IPAddressToString(device_group_member->ip_address));
                   continue;
                 }
 
