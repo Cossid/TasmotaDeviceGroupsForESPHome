@@ -1253,8 +1253,8 @@ void device_groups::ExecuteCommand(const char *cmnd, uint32_t source) { return; 
 
 void device_groups::InitTasmotaCompatibility() {
   Settings = (TSettings *) malloc(sizeof(TSettings));
-  Settings->device_group_share_in = send_mask_;
-  Settings->device_group_share_out = receive_mask_;
+  Settings->device_group_share_in = receive_mask_;
+  Settings->device_group_share_out = send_mask_;
   Settings->flag4.device_groups_enabled = 1;
   Settings->flag4.multiple_device_groups = 0;
 }
