@@ -13,7 +13,7 @@ device_groups_ns = cg.esphome_ns.namespace("device_groups")
 device_groups = device_groups_ns.class_("device_groups", cg.Component)
 
 MULTI_CONF = True
-#CONF_ITEMS = "items"
+CONF_GROUP_NAME = "group_name"
 CONF_SWITCHES = "switches"
 CONF_LIGHTS = "lights"
 CONF_SEND_MASK = "send_mask"
@@ -21,10 +21,8 @@ CONF_RECEIVE_MASK = "receive_mask"
 
 CONFIG_SCHEMA = cv.Schema(
     {
-        cv.Required(CONF_ID): cv.declare_id(device_groups),
-        # cv.Required(CONF_ITEMS): cv.All(
-        #     cv.ensure_list(cv.use_id(cv.Any(switch.Switch, light.LightState))), cv.Length(min=1)
-        # ),
+        cv.GenerateID(CONF_ID): cv.declare_id(device_groups),
+        cv.Required(CONF_GROUP_NAME): cv.string,
         cv.Optional(CONF_SWITCHES): cv.All(cv.ensure_list(cv.use_id(switch.Switch)), cv.Length(min=1)),
         cv.Optional(CONF_LIGHTS): cv.All(cv.ensure_list(cv.use_id(light.LightState)), cv.Length(min=1)),
         cv.Optional(CONF_SEND_MASK, default=0xFFFFFFFF): cv.hex_uint32_t,
@@ -36,7 +34,7 @@ CONFIG_SCHEMA = cv.Schema(
 async def to_code(config):
     var = cg.new_Pvariable(config[CONF_ID])
     await cg.register_component(var, config)
-    cg.add(var.set_device_group_name(str(var)))
+    cg.add(var.register_device_group_name(config[CONF_GROUP_NAME]))
     cg.add(var.register_send_mask(config[CONF_SEND_MASK]))
     cg.add(var.register_receive_mask(config[CONF_RECEIVE_MASK]))
 

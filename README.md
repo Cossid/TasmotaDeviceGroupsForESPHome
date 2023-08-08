@@ -13,7 +13,7 @@ external_components:
     refresh: 10 min
 
 device_groups:
-  - id: "testgroup1"         # Tasmota device group name
+  - group_name: "testgroup1"         # Tasmota device group name
     send_mask: 0xFFFFFFFF    # Optional, defaults to 0xFFFFFFFF (send everything).  Can be integer or hex
     receive_mask: 0xFFFFFFFF # Optional, defaults to 0xFFFFFFFF (receive everything).  Can be integer or hex
     switches:
@@ -22,7 +22,7 @@ device_groups:
     lights:
       - light_rgbww1         # ESPHome entity id
       - light_rgbww2         # ESPHome entity id
-  - id: "testgroup2"         # Tasmota device group name
+  - group_name: "testgroup2"         # Tasmota device group name
     switches:
       - gpio_switch2         # ESPHome entity id
 ```
@@ -46,7 +46,7 @@ Masks can be set as integer or hex values.  Integer will work better when you wa
 
 If you want combinations, you just add them together, same as Tasmota.  For example, Power + Light Color = 17
 
-### Supported:
+### Supported
 
 * Power States
 * Light States
@@ -100,14 +100,14 @@ button:
           blue: 0%
 
 device_groups:
-  - id: "light_group"    # Tasmota device group name
+  - group_name: "light_group"    # Tasmota device group name
     lights:
       - internal_light   # ESPHome entity id
 ```
 
 Button is just an example, but you could hook into any of the `on_` events for `binary_sensor`, `button`, `switch`, etc.
 
-### Misc:
+### Misc
 
 You may see a notice about blocking for too long.  This should not really be a problem, it is a generic ESPHome notice about performance.  Delays are mostly caused by waiting on network traffic.  The notice will look like this:
 

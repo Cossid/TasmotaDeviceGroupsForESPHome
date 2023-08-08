@@ -242,7 +242,7 @@ typedef struct {
 
 class device_groups : public Component {
  public:
-  void set_device_group_name(const char *group_name) { this->device_group_name_ = group_name; }
+  void register_device_group_name(const char *group_name) { this->device_group_name_ = group_name; }
 #ifdef USE_SWITCH
   void register_switches(const std::vector<switch_::Switch *> &switches) { this->switches_ = switches; }
 #endif
