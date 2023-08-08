@@ -9,8 +9,6 @@ namespace device_groups {
 
 static const char *const TAG = "dgr";
 
-
-
 char *IPAddressToString(const IPAddress &ip_address) {
   static char buffer[16];
   sprintf_P(buffer, PSTR("%u.%u.%u.%u"), ip_address[0], ip_address[1], ip_address[2], ip_address[3]);
@@ -1224,11 +1222,12 @@ void device_groups::ExecuteCommandPower(uint32_t device, uint32_t state, uint32_
 
 #ifdef USE_SWITCH
   for (switch_::Switch *obj : this->switches_) {
-    //obj->publish_state(TasmotaGlobal.power);
-    if (TasmotaGlobal.power > 0)
+    if (TasmotaGlobal.power > 0) {
       obj->turn_on();
-    else
+    } else {
       obj->turn_off();
+    }
+    obj->publish_state(TasmotaGlobal.power);
   }
 #endif
 #ifdef USE_LIGHT
