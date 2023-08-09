@@ -112,6 +112,7 @@ void device_groups::loop() {
     return;
 
   if (!network::is_connected()) {
+    dgr_state = DGR_STATE_UNINTIALIZED;
     return;
   }
 
