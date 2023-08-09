@@ -232,7 +232,7 @@ bool device_groups::DeviceGroupsStart() {
       device_group->initial_status_requests_remaining = 10;
       device_group->next_ack_check_time = next_check_time;
     }
-    ESP_LOGD(TAG, "%s (Re)discovering members", device_group->group_name);
+    ESP_LOGD(TAG, "(Re)discovering members");
   }
 
   return true;
