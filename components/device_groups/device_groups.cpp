@@ -1007,7 +1007,7 @@ bool device_groups::_SendDeviceGroupMessage(int32_t device, DevGroupMessageType 
   return 0;
 }
 
-void device_groups::ProcessDeviceGroupMessage(multicast_packet packet) {
+ProcessGroupMessageResult device_groups::ProcessDeviceGroupMessage(multicast_packet packet) {
   // Search for a device group with the target group name. If one isn't found, return.
   uint8_t device_group_index = 0;
   struct device_group *device_group = device_groups_;
@@ -1016,7 +1016,7 @@ void device_groups::ProcessDeviceGroupMessage(multicast_packet packet) {
     if (!strcmp(message_group_name, device_group->group_name))
       break;
     if (++device_group_index >= device_group_count)
-      return;
+      return PROCESS_GROUP_MESSAGE_UNMATCHED;
     device_group++;
   }
 
@@ -1029,7 +1029,7 @@ void device_groups::ProcessDeviceGroupMessage(multicast_packet packet) {
       device_group_member = (struct device_group_member *) calloc(1, sizeof(struct device_group_member));
       if (device_group_member == nullptr) {
         ESP_LOGE(TAG, "Error allocating member block");
-        return;
+        return PROCESS_GROUP_MESSAGE_ERROR;
       }
       device_group_member->ip_address = packet.remoteIP;
       device_group_member->acked_sequence = device_group->outgoing_sequence;
@@ -1044,6 +1044,7 @@ void device_groups::ProcessDeviceGroupMessage(multicast_packet packet) {
   }
 
   SendReceiveDeviceGroupMessage(device_group, device_group_member, packet.payload, packet.length, true);
+  return PROCESS_GROUP_MESSAGE_SUCCESS;
 }
 
 void device_groups::DeviceGroupStatus(uint8_t device_group_index) {
@@ -1089,12 +1090,12 @@ void device_groups::DeviceGroupsLoop(void) {
   for (multicast_packet packet : received_packets) {
     std::string identifier(std::string(kDeviceGroupMessage) + this->device_group_name_);
     if (!strncmp_P((char *) packet.payload, identifier.c_str(), identifier.length())) {
-      ProcessDeviceGroupMessage(packet);
-      received_packets.erase(
-        std::remove_if(received_packets.begin(), received_packets.end(), [&](multicast_packet const & mcp) {
-            return mcp.id == packet.id;
-        }),
-        received_packets.end());
+      ProcessGroupMessageResult status = ProcessDeviceGroupMessage(packet);
+      if (status != PROCESS_GROUP_MESSAGE_UNMATCHED) {
+        received_packets.erase(std::remove_if(received_packets.begin(), received_packets.end(),
+                                              [&](multicast_packet const &mcp) { return mcp.id == packet.id; }),
+                               received_packets.end());
+      }
     } else {
       bool isRegistered = false;
       for (std::string registered_group_name : registered_group_names) {
@@ -1106,11 +1107,9 @@ void device_groups::DeviceGroupsLoop(void) {
       }
       if (!isRegistered) {
         ESP_LOGVV(TAG, "Removing unregistered packet identifier, %s", packet_buffer);
-        received_packets.erase(
-        std::remove_if(received_packets.begin(), received_packets.end(), [&](multicast_packet const & mcp) {
-            return mcp.id == packet.id;
-        }),
-        received_packets.end());
+        received_packets.erase(std::remove_if(received_packets.begin(), received_packets.end(),
+                                              [&](multicast_packet const &mcp) { return mcp.id == packet.id; }),
+                               received_packets.end());
       }
     }
   }

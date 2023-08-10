@@ -171,6 +171,12 @@ enum LoggingLevels {
   LOG_LEVEL_ALL
 };
 
+enum ProcessGroupMessageResult {
+  PROCESS_GROUP_MESSAGE_ERROR,
+  PROCESS_GROUP_MESSAGE_SUCCESS,
+  PROCESS_GROUP_MESSAGE_UNMATCHED
+};
+
 struct device_group_member {
   struct device_group_member *flink;
   IPAddress ip_address;
@@ -276,7 +282,7 @@ class device_groups : public Component {
   bool _SendDeviceGroupMessage(int32_t device, DevGroupMessageType message_type, ...);
 #define SendDeviceGroupMessage(DEVICE_INDEX, REQUEST_TYPE, ...) \
   _SendDeviceGroupMessage(DEVICE_INDEX, REQUEST_TYPE, ##__VA_ARGS__, 0)
-  void ProcessDeviceGroupMessage(multicast_packet);
+  ProcessGroupMessageResult ProcessDeviceGroupMessage(multicast_packet);
   bool XdrvCall(uint8_t Function);
   void ExecuteCommandPower(uint32_t device, uint32_t state, uint32_t source);
   void ExecuteCommand(const char *cmnd, uint32_t source);
