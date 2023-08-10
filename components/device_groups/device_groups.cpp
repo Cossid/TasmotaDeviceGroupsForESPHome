@@ -847,7 +847,7 @@ bool device_groups::_SendDeviceGroupMessage(int32_t device, DevGroupMessageType 
       // Rebuild the previous update message, removing any items whose values are included in this
       // new update.
       uint8_t *previous_message_ptr = message_ptr;
-      while (item = *previous_message_ptr++) {
+      while ((item = *previous_message_ptr++)) {
         // If this is the flags item, save the flags.
         if (item == DGR_ITEM_FLAGS) {
           item_flags = *previous_message_ptr++;
@@ -1007,11 +1007,11 @@ bool device_groups::_SendDeviceGroupMessage(int32_t device, DevGroupMessageType 
   return 0;
 }
 
-void device_groups::ProcessDeviceGroupMessage(uint8_t *message, int message_length) {
+void device_groups::ProcessDeviceGroupMessage(multicast_packet packet) {
   // Search for a device group with the target group name. If one isn't found, return.
   uint8_t device_group_index = 0;
   struct device_group *device_group = device_groups_;
-  char *message_group_name = (char *) message + sizeof(DEVICE_GROUP_MESSAGE) - 1;
+  char *message_group_name = (char *) packet.payload + sizeof(DEVICE_GROUP_MESSAGE) - 1;
   for (;;) {
     if (!strcmp(message_group_name, device_group->group_name))
       break;
@@ -1022,7 +1022,6 @@ void device_groups::ProcessDeviceGroupMessage(uint8_t *message, int message_leng
 
   // Find the group member. If this is a new group member, add it.
   struct device_group_member *device_group_member;
-  IPAddress remote_ip = device_groups_udp.remoteIP();
   struct device_group_member **flink = &device_group->device_group_members;
   for (;;) {
     device_group_member = *flink;
@@ -1032,19 +1031,19 @@ void device_groups::ProcessDeviceGroupMessage(uint8_t *message, int message_leng
         ESP_LOGE(TAG, "Error allocating member block");
         return;
       }
-      device_group_member->ip_address = remote_ip;
+      device_group_member->ip_address = packet.remoteIP;
       device_group_member->acked_sequence = device_group->outgoing_sequence;
       device_group->member_timeout_time = millis() + DGR_MEMBER_TIMEOUT;
       *flink = device_group_member;
-      ESP_LOGD(TAG, "%s Member %s added", device_group->group_name, IPAddressToString(remote_ip));
+      ESP_LOGD(TAG, "%s Member %s added", device_group->group_name, IPAddressToString(packet.remoteIP));
       break;
-    } else if (device_group_member->ip_address == remote_ip) {
+    } else if (device_group_member->ip_address == packet.remoteIP) {
       break;
     }
     flink = &device_group_member->flink;
   }
 
-  SendReceiveDeviceGroupMessage(device_group, device_group_member, message, message_length, true);
+  SendReceiveDeviceGroupMessage(device_group, device_group_member, packet.payload, packet.length, true);
 }
 
 void device_groups::DeviceGroupStatus(uint8_t device_group_index) {
@@ -1070,12 +1069,14 @@ void device_groups::DeviceGroupStatus(uint8_t device_group_index) {
 
 static void static_multicast_listen_loop() {
   while (device_groups_udp.parsePacket()) {
-    uint8_t packet_buffer[512];
-    int length = device_groups_udp.read(packet_buffer, sizeof(packet_buffer) - 1);
+    struct multicast_packet packet;
+    int length = device_groups_udp.read(packet.payload, sizeof(packet.payload) - 1);
     if (length > 0) {
-      packet_buffer[length] = 0;
-      std::vector<uint8_t> packet_vector = std::vector<uint8_t>(packet_buffer, packet_buffer + length);
-      received_packets.push_back(packet_vector);
+      packet.id = packetId++;
+      packet.payload[length] = 0;
+      packet.length = length;
+      packet.remoteIP = device_groups_udp.remoteIP();
+      received_packets.push_back(packet);
     }
   }
 }
@@ -1085,28 +1086,31 @@ void device_groups::DeviceGroupsLoop(void) {
     return;
 
   static_multicast_listen_loop();
-  for (std::vector<uint8_t> vector_packet_buffer : received_packets) {
-    uint8_t packet_buffer[512];
-    int length = std::distance(vector_packet_buffer.begin(), vector_packet_buffer.end());
-    std::copy(vector_packet_buffer.begin(), vector_packet_buffer.end(), packet_buffer);
+  for (multicast_packet packet : received_packets) {
     std::string identifier(std::string(kDeviceGroupMessage) + this->device_group_name_);
-    if (!strncmp_P((char *) packet_buffer, identifier.c_str(), identifier.length())) {
-      ProcessDeviceGroupMessage(packet_buffer, length);
-      received_packets.erase(std::remove(received_packets.begin(), received_packets.end(), vector_packet_buffer),
-                             received_packets.end());
+    if (!strncmp_P((char *) packet.payload, identifier.c_str(), identifier.length())) {
+      ProcessDeviceGroupMessage(packet);
+      received_packets.erase(
+        std::remove_if(received_packets.begin(), received_packets.end(), [&](multicast_packet const & mcp) {
+            return mcp.id == packet.id;
+        }),
+        received_packets.end());
     } else {
       bool isRegistered = false;
       for (std::string registered_group_name : registered_group_names) {
         std::string identifier_registered(std::string(kDeviceGroupMessage) + registered_group_name);
-        if (!strncmp_P((char *) packet_buffer, identifier_registered.c_str(), identifier_registered.length())) {
+        if (!strncmp_P((char *) packet.payload, identifier_registered.c_str(), identifier_registered.length())) {
           isRegistered = true;
           break;
         }
       }
       if (!isRegistered) {
         ESP_LOGVV(TAG, "Removing unregistered packet identifier, %s", packet_buffer);
-        received_packets.erase(std::remove(received_packets.begin(), received_packets.end(), vector_packet_buffer),
-                               received_packets.end());
+        received_packets.erase(
+        std::remove_if(received_packets.begin(), received_packets.end(), [&](multicast_packet const & mcp) {
+            return mcp.id == packet.id;
+        }),
+        received_packets.end());
       }
     }
   }
