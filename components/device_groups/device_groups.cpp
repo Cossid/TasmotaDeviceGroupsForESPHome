@@ -1106,7 +1106,7 @@ void device_groups::DeviceGroupsLoop(void) {
         }
       }
       if (!isRegistered) {
-        ESP_LOGVV(TAG, "Removing unregistered packet identifier, %s", packet_buffer);
+        ESP_LOGVV(TAG, "Removing unregistered packet identifier, %s", packet.payload);
         received_packets.erase(std::remove_if(received_packets.begin(), received_packets.end(),
                                               [&](multicast_packet const &mcp) { return mcp.id == packet.id; }),
                                received_packets.end());
