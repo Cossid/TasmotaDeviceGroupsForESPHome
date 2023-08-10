@@ -38,7 +38,7 @@ namespace device_groups {
 
 const uint8_t MAX_DEV_GROUP_NAMES = 4;  // Max number of Device Group names
 const uint16_t TOPSZ = 151;             // Max number of characters in topic string
-const char kDeviceGroupMessage[] PROGMEM = DEVICE_GROUP_MESSAGE;
+const char kDeviceGroupMessage[] = DEVICE_GROUP_MESSAGE;
 
 typedef uint32_t power_t;                  // Power (Relay) type
 const uint32_t POWER_MASK = 0xFFFFFFFFUL;  // Power (Relay) full mask
@@ -240,9 +240,21 @@ typedef struct {
   uint32_t device_group_share_out;  // FD0  Bitmask of device group items exported
 } TSettings;
 
+struct multicast_packet {
+  uint32_t id;
+  int length;
+  uint8_t payload[512];
+  IPAddress remoteIP;
+};
+
+static WiFiUDP device_groups_udp;
+static std::vector<multicast_packet> received_packets{};
+static std::vector<std::string> registered_group_names{};
+static uint32_t packetId = 0;
+
 class device_groups : public Component {
  public:
-  void register_device_group_name(const char *group_name) { this->device_group_name_ = group_name; }
+  void register_device_group_name(std::string group_name) { this->device_group_name_ = std::move(group_name); }
 #ifdef USE_SWITCH
   void register_switches(const std::vector<switch_::Switch *> &switches) { this->switches_ = switches; }
 #endif
@@ -264,7 +276,7 @@ class device_groups : public Component {
   bool _SendDeviceGroupMessage(int32_t device, DevGroupMessageType message_type, ...);
 #define SendDeviceGroupMessage(DEVICE_INDEX, REQUEST_TYPE, ...) \
   _SendDeviceGroupMessage(DEVICE_INDEX, REQUEST_TYPE, ##__VA_ARGS__, 0)
-  void ProcessDeviceGroupMessage(uint8_t *message, int message_length);
+  void ProcessDeviceGroupMessage(multicast_packet);
   bool XdrvCall(uint8_t Function);
   void ExecuteCommandPower(uint32_t device, uint32_t state, uint32_t source);
   void ExecuteCommand(const char *cmnd, uint32_t source);
@@ -275,7 +287,7 @@ class device_groups : public Component {
   void DeviceGroupsStop();
   void DeviceGroupStatus(uint8_t device_group_index);
 
-  const char *device_group_name_;
+  std::string device_group_name_;
   bool update_{true};
   uint32_t send_mask_{0xffffffff};
   uint32_t receive_mask_{0xffffffff};
@@ -287,7 +299,6 @@ class device_groups : public Component {
   std::vector<light::LightState *> lights_{};
 #endif
 
-  WiFiUDP device_groups_udp;
   struct device_group *device_groups_;
   uint32_t next_check_time;
   bool device_groups_initialized = false;

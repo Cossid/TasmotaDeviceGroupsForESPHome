@@ -46,7 +46,11 @@ uint32_t DeviceGroupSharedMask(uint8_t item) {
 }
 
 void device_groups::setup() {
-  ESP_LOGCONFIG(TAG, "Setting up Device Groups Component for group %s", this->device_group_name_);
+  ESP_LOGCONFIG(TAG, "Setting up Device Groups Component for group %s", this->device_group_name_.c_str());
+
+  std::string registered_group_name = this->device_group_name_;
+  registered_group_names.push_back(registered_group_name);
+
 #ifdef USE_SWITCH
   for (switch_::Switch *obj : this->switches_) {
     obj->add_on_state_callback([this, obj](bool state) {
@@ -76,7 +80,7 @@ void device_groups::setup() {
 #endif
 }
 void device_groups::dump_config() {
-  ESP_LOGCONFIG(TAG, "Device Group %s configuration:", this->device_group_name_);
+  ESP_LOGCONFIG(TAG, "Device Group %s configuration:", this->device_group_name_.c_str());
   ESP_LOGCONFIG(TAG, " - Send Mask: 0x%08x", send_mask_);
   ESP_LOGCONFIG(TAG, " - Receive Mask: 0x%08x", receive_mask_);
 #ifdef USE_SWITCH
@@ -183,7 +187,7 @@ void device_groups::DeviceGroupsInit() {
     device_group_index + 1);
       }
     }*/
-    strcpy(device_group->group_name, this->device_group_name_);
+    strcpy(device_group->group_name, this->device_group_name_.c_str());
     device_group->message_header_length =
         sprintf_P((char *) device_group->message, PSTR("%s%s"), kDeviceGroupMessage, device_group->group_name) + 1;
     device_group->no_status_share = 0;
@@ -234,7 +238,7 @@ bool device_groups::DeviceGroupsStart() {
       device_group->initial_status_requests_remaining = 10;
       device_group->next_ack_check_time = next_check_time;
     }
-    ESP_LOGD(TAG, "%s (Re)discovering members", this->device_group_name_);
+    ESP_LOGD(TAG, "%s (Re)discovering members", this->device_group_name_.c_str());
   }
 
   return true;
@@ -1064,17 +1068,45 @@ void device_groups::DeviceGroupStatus(uint8_t device_group_index) {
   }
 }
 
-void device_groups::DeviceGroupsLoop(void) {
-  if (!device_groups_up || TasmotaGlobal.restart_flag)
-    return;
-
+static void static_multicast_listen_loop() {
   while (device_groups_udp.parsePacket()) {
     uint8_t packet_buffer[512];
     int length = device_groups_udp.read(packet_buffer, sizeof(packet_buffer) - 1);
     if (length > 0) {
       packet_buffer[length] = 0;
-      if (!strncmp_P((char *) packet_buffer, kDeviceGroupMessage, sizeof(DEVICE_GROUP_MESSAGE) - 1)) {
-        ProcessDeviceGroupMessage(packet_buffer, length);
+      std::vector<uint8_t> packet_vector = std::vector<uint8_t>(packet_buffer, packet_buffer + length);
+      received_packets.push_back(packet_vector);
+    }
+  }
+}
+
+void device_groups::DeviceGroupsLoop(void) {
+  if (!device_groups_up || TasmotaGlobal.restart_flag)
+    return;
+
+  static_multicast_listen_loop();
+  for (std::vector<uint8_t> vector_packet_buffer : received_packets) {
+    uint8_t packet_buffer[512];
+    int length = std::distance(vector_packet_buffer.begin(), vector_packet_buffer.end());
+    std::copy(vector_packet_buffer.begin(), vector_packet_buffer.end(), packet_buffer);
+    std::string identifier(std::string(kDeviceGroupMessage) + this->device_group_name_);
+    if (!strncmp_P((char *) packet_buffer, identifier.c_str(), identifier.length())) {
+      ProcessDeviceGroupMessage(packet_buffer, length);
+      received_packets.erase(std::remove(received_packets.begin(), received_packets.end(), vector_packet_buffer),
+                             received_packets.end());
+    } else {
+      bool isRegistered = false;
+      for (std::string registered_group_name : registered_group_names) {
+        std::string identifier_registered(std::string(kDeviceGroupMessage) + registered_group_name);
+        if (!strncmp_P((char *) packet_buffer, identifier_registered.c_str(), identifier_registered.length())) {
+          isRegistered = true;
+          break;
+        }
+      }
+      if (!isRegistered) {
+        ESP_LOGVV(TAG, "Removing unregistered packet identifier, %s", packet_buffer);
+        received_packets.erase(std::remove(received_packets.begin(), received_packets.end(), vector_packet_buffer),
+                               received_packets.end());
       }
     }
   }
@@ -1132,7 +1164,8 @@ void device_groups::DeviceGroupsLoop(void) {
                 if ((int32_t) (now - device_group->member_timeout_time) >= 0) {
                   *flink = device_group_member->flink;
                   free(device_group_member);
-                  ESP_LOGD(TAG, "%s Member %s removed", device_group->group_name, IPAddressToString(device_group_member->ip_address));
+                  ESP_LOGD(TAG, "%s Member %s removed", device_group->group_name,
+                           IPAddressToString(device_group_member->ip_address));
                   continue;
                 }
 
