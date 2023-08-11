@@ -107,6 +107,10 @@ device_groups:
 
 Button is just an example, but you could hook into any of the `on_` events for `binary_sensor`, `button`, `switch`, etc.
 
+### Known Issues
+
+Multiple relays in the same group cannot currently be individually addressed, so an action against the group will apply to all entities in the group on ESPHome.  [Issue #2](https://github.com/Cossid/TasmotaDeviceGroupsForESPHome/issues/2) will track the potential resolution for this.  As a workaround, you can enable SetOption88 on Tasmota and assign individual groups.
+
 ### Misc
 
 You may see a notice about blocking for too long.  This should not really be a problem, it is a generic ESPHome notice about performance.  Delays are mostly caused by waiting on network traffic.  The notice will look like this:
