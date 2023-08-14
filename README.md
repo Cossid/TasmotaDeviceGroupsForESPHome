@@ -109,7 +109,8 @@ Button is just an example, but you could hook into any of the `on_` events for `
 
 ### Known Issues
 
-Multiple relays in the same group cannot currently be individually addressed, so an action against the group will apply to all entities in the group on ESPHome.  [Issue #2](https://github.com/Cossid/TasmotaDeviceGroupsForESPHome/issues/2) will track the potential resolution for this.  As a workaround, you can enable SetOption88 on Tasmota and assign individual groups.
+* Multiple relays in the same group cannot currently be individually addressed, so an action against the group will apply to all entities in the group on ESPHome.  [Issue #2](https://github.com/Cossid/TasmotaDeviceGroupsForESPHome/issues/2) will track the potential resolution for this.  As a workaround, you can enable SetOption88 on Tasmota and assign individual groups.
+* Does not currently work with ESP-IDF framework, as it lacks an arduino-compatible upd multicast library.  Support may come eventually, but for the time being, arduino-based frameworks are required.
 
 ### Misc
 
