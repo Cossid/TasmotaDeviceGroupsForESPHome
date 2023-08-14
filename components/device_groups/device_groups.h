@@ -5,14 +5,19 @@
 #include <vector>
 #include "esphome/components/network/ip_address.h"
 
-#if defined(USE_ESP32) || defined(USE_ESP_IDF)
+#if defined(USE_ESP32)
 #include <esp_wifi.h>
+#if defined(USE_ESP_IDF)
+#include "LwIP/Udp.h"
+#else
+#include <WiFiUdp.h>
+#endif
 #elif USE_ESP8266
 #include <ESP8266WiFi.h>
+#include <WiFiUdp.h>
 #else
 #include <WiFi.h>
 #endif
-#include <WiFiUdp.h>
 
 #ifdef USE_SWITCH
 #include "esphome/components/switch/switch.h"
