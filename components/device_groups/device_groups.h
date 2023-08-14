@@ -7,11 +7,7 @@
 
 #if defined(USE_ESP32)
 #include <esp_wifi.h>
-#if defined(USE_ESP_IDF)
-#include "LwIP/Udp.h"
-#else
 #include <WiFiUdp.h>
-#endif
 #elif USE_ESP8266
 #include <ESP8266WiFi.h>
 #include <WiFiUdp.h>
