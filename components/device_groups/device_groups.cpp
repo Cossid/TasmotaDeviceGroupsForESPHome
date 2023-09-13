@@ -62,8 +62,11 @@ void device_groups::setup() {
 #ifdef USE_LIGHT
   for (light::LightState *obj : this->lights_) {
     obj->add_new_remote_values_callback([this, obj]() {
-      float red, green, blue, cold_white, warm_white;
-      obj->remote_values.as_rgbww(&red, &green, &blue, &cold_white, &warm_white);
+      float red, green, blue, cold_white, warm_white, brightness;
+      cold_white = obj->remote_values.get_cold_white();
+      warm_white = obj->remote_values.get_warm_white();
+      brightness = obj->remote_values.get_brightness();
+      obj->remote_values.as_rgb(&red, &green, &blue);
       uint8_t light_channels[6] = {(uint8_t) (red * 255),        (uint8_t) (green * 255),      (uint8_t) (blue * 255),
                                    (uint8_t) (cold_white * 255), (uint8_t) (warm_white * 255), 0};
       SendDeviceGroupMessage(0, (DevGroupMessageType) (DGR_MSGTYP_UPDATE_MORE_TO_COME + DGR_MSGTYPFLAG_WITH_LOCAL),
@@ -74,7 +77,7 @@ void device_groups::setup() {
                                DGR_ITEM_LIGHT_CHANNELS, light_channels);
       }
       SendDeviceGroupMessage(0, (DevGroupMessageType) (DGR_MSGTYP_UPDATE + DGR_MSGTYPFLAG_WITH_LOCAL),
-                             DGR_ITEM_LIGHT_BRI, (uint8_t) (obj->remote_values.get_brightness() * 255));
+                             DGR_ITEM_LIGHT_BRI, (uint8_t)(brightness * 255));
     });
   }
 #endif
