@@ -67,6 +67,10 @@ void device_groups::setup() {
       warm_white = obj->remote_values.get_warm_white();
       brightness = obj->remote_values.get_brightness();
       obj->remote_values.as_rgb(&red, &green, &blue);
+      auto color_mode = obj->remote_values.get_color_mode();
+      if (color_mode == esphome::light::ColorMode::RGB) {
+        cold_white = warm_white = 0;
+      }
       uint8_t light_channels[6] = {(uint8_t) (red * 255),        (uint8_t) (green * 255),      (uint8_t) (blue * 255),
                                    (uint8_t) (cold_white * 255), (uint8_t) (warm_white * 255), 0};
       SendDeviceGroupMessage(0, (DevGroupMessageType) (DGR_MSGTYP_UPDATE_MORE_TO_COME + DGR_MSGTYPFLAG_WITH_LOCAL),
