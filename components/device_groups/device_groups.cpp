@@ -583,7 +583,7 @@ void device_groups::SendReceiveDeviceGroupMessage(struct device_group *device_gr
 
 write_log:
   *log_ptr++ = 0;
-  ESP_LOGV(TAG, "%s", log_buffer);
+  ESP_LOGD(TAG, "%s", log_buffer);
 
   // If this is a received status request message, then if the requestor didn't just ack our
   // previous full status update, send a full status update.
