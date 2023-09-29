@@ -63,9 +63,8 @@ void device_groups::setup() {
   for (light::LightState *obj : this->lights_) {
     obj->add_new_remote_values_callback([this, obj]() {
       float red, green, blue, cold_white, warm_white, brightness;
-      cold_white = obj->remote_values.get_cold_white();
-      warm_white = obj->remote_values.get_warm_white();
-      brightness = obj->remote_values.get_brightness();
+      obj->remote_values.as_brightness(&brightness);
+      obj->remote_values.as_cwww(&cold_white, &warm_white);
       obj->remote_values.as_rgb(&red, &green, &blue);
       auto color_mode = obj->remote_values.get_color_mode();
       if (color_mode == esphome::light::ColorMode::RGB) {
