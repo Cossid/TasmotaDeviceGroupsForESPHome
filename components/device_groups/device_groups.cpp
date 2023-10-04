@@ -63,13 +63,38 @@ void device_groups::setup() {
   for (light::LightState *obj : this->lights_) {
     obj->add_new_remote_values_callback([this, obj]() {
       float red, green, blue, cold_white, warm_white, brightness;
-      obj->remote_values.as_brightness(&brightness);
-      obj->remote_values.as_cwww(&cold_white, &warm_white);
-      obj->remote_values.as_rgb(&red, &green, &blue);
-      auto color_mode = obj->remote_values.get_color_mode();
-      if (color_mode == esphome::light::ColorMode::RGB) {
-        cold_white = warm_white = 0;
+      brightness = obj->remote_values.get_brightness();
+
+      if (obj->get_traits().supports_color_capability(light::ColorCapability::COLOR_TEMPERATURE)) {
+        float min_mireds, max_mireds, color_temperature, color_brightness;
+        color_temperature = obj->remote_values.get_color_temperature();
+        min_mireds = obj->get_traits().get_min_mireds();
+        max_mireds = obj->get_traits().get_max_mireds();
+        warm_white = (color_temperature - min_mireds) / (max_mireds - min_mireds);
+        cold_white = 1.0f - warm_white;
+      } else if (obj->get_traits().supports_color_capability(light::ColorCapability::COLD_WARM_WHITE)) {
+        cold_white = obj->remote_values.get_cold_white();
+        warm_white = obj->remote_values.get_warm_white();
+      } else if (obj->get_traits().supports_color_capability(light::ColorCapability::WHITE)) {
+        warm_white = cold_white = obj->remote_values.get_white();
       }
+      
+      if (obj->get_traits().supports_color_capability(light::ColorCapability::RGB)) {
+        red = obj->remote_values.get_red();
+        green = obj->remote_values.get_green();
+        blue = obj->remote_values.get_blue();
+      }
+      
+      auto color_mode = obj->remote_values.get_color_mode();
+
+      if (color_mode & light::ColorCapability::RGB) {
+        cold_white = warm_white = 0;
+      } else if (color_mode & light::ColorCapability::WHITE
+                 || color_mode & light::ColorCapability::COLOR_TEMPERATURE
+                 || color_mode & light::ColorCapability::COLD_WARM_WHITE) {
+        red = green = blue = 0;
+      }
+
       uint8_t light_channels[6] = {(uint8_t) (red * 255),        (uint8_t) (green * 255),      (uint8_t) (blue * 255),
                                    (uint8_t) (cold_white * 255), (uint8_t) (warm_white * 255), 0};
       SendDeviceGroupMessage(0, (DevGroupMessageType) (DGR_MSGTYP_UPDATE_MORE_TO_COME + DGR_MSGTYPFLAG_WITH_LOCAL),
@@ -522,6 +547,7 @@ void device_groups::SendReceiveDeviceGroupMessage(struct device_group *device_gr
             for (light::LightState *obj : this->lights_) {
               auto call = obj->make_call();
               call.set_brightness_if_supported(XdrvMailbox.payload / 255.0f);
+              call.set_color_brightness_if_supported(XdrvMailbox.payload / 255.0f);
               call.perform();
             }
 #endif
@@ -534,36 +560,46 @@ void device_groups::SendReceiveDeviceGroupMessage(struct device_group *device_gr
               const float red = (uint8_t) XdrvMailbox.data[0] / 255.0f;
               const float green = (uint8_t) XdrvMailbox.data[1] / 255.0f;
               const float blue = (uint8_t) XdrvMailbox.data[2] / 255.0f;
-              const float coldwhite = (uint8_t) XdrvMailbox.data[3] / 255.0f;
-              const float warmwhite = (uint8_t) XdrvMailbox.data[4] / 255.0f;
+              const float cold_white = (uint8_t) XdrvMailbox.data[3] / 255.0f;
+              const float warm_white = (uint8_t) XdrvMailbox.data[4] / 255.0f;
               const bool has_rgb = red + green + blue > 0.0f;
-              const bool has_white = coldwhite + warmwhite > 0.0f;
+              const bool has_white = cold_white + warm_white > 0.0f;
 
-              if (color_modes.count(esphome::light::ColorMode::RGB_COLOR_TEMPERATURE) > 0) {
-                call.set_color_mode_if_supported(esphome::light::ColorMode::RGB_COLOR_TEMPERATURE);
-              } else if (color_modes.count(esphome::light::ColorMode::RGB_COLD_WARM_WHITE) > 0) {
-                call.set_color_mode_if_supported(esphome::light::ColorMode::RGB_COLD_WARM_WHITE);
-              } else if (has_white && !has_rgb && color_modes.count(esphome::light::ColorMode::COLOR_TEMPERATURE) > 0) {
-                call.set_color_mode_if_supported(esphome::light::ColorMode::COLOR_TEMPERATURE);
-              } else if (has_white && !has_rgb && color_modes.count(esphome::light::ColorMode::COLD_WARM_WHITE) > 0) {
-                call.set_color_mode_if_supported(esphome::light::ColorMode::COLD_WARM_WHITE);
-              } else if (has_white && color_modes.count(esphome::light::ColorMode::RGB_WHITE) > 0) {
-                call.set_color_mode_if_supported(esphome::light::ColorMode::RGB_WHITE);
-              } else if (has_rgb && color_modes.count(esphome::light::ColorMode::RGB) > 0) {
-                call.set_color_mode_if_supported(esphome::light::ColorMode::RGB);
-              } else if (color_modes.count(esphome::light::ColorMode::WHITE) > 0) {
-                call.set_color_mode_if_supported(esphome::light::ColorMode::WHITE);
-              } else if (color_modes.count(esphome::light::ColorMode::BRIGHTNESS) > 0) {
-                call.set_color_mode_if_supported(esphome::light::ColorMode::BRIGHTNESS);
+              if (has_white && has_rgb && color_modes.count(light::ColorMode::RGB_COLOR_TEMPERATURE) > 0) {
+                call.set_color_mode_if_supported(light::ColorMode::RGB_COLOR_TEMPERATURE);
+              } else if (has_white && has_rgb && color_modes.count(light::ColorMode::RGB_COLD_WARM_WHITE) > 0) {
+                call.set_color_mode_if_supported(light::ColorMode::RGB_COLD_WARM_WHITE);
+              } else if (has_white && has_rgb && color_modes.count(light::ColorMode::RGB_WHITE) > 0) {
+                call.set_color_mode_if_supported(light::ColorMode::RGB_WHITE);
+              } else if (has_white && !has_rgb && color_modes.count(light::ColorMode::COLOR_TEMPERATURE) > 0) {
+                call.set_color_mode_if_supported(light::ColorMode::COLOR_TEMPERATURE);
+              } else if (has_white && !has_rgb && color_modes.count(light::ColorMode::COLD_WARM_WHITE) > 0) {
+                call.set_color_mode_if_supported(light::ColorMode::COLD_WARM_WHITE);
+              } else if (has_rgb && color_modes.count(light::ColorMode::RGB) > 0) {
+                call.set_color_mode_if_supported(light::ColorMode::RGB);
+              } else if (color_modes.count(light::ColorMode::WHITE) > 0) {
+                call.set_color_mode_if_supported(light::ColorMode::WHITE);
+              } else if (color_modes.count(light::ColorMode::BRIGHTNESS) > 0) {
+                call.set_color_mode_if_supported(light::ColorMode::BRIGHTNESS);
               } else {
-                call.set_color_mode_if_supported(esphome::light::ColorMode::ON_OFF);
+                call.set_color_mode_if_supported(light::ColorMode::ON_OFF);
               }
 
-              call.set_red_if_supported(red);
-              call.set_green_if_supported(green);
-              call.set_blue_if_supported(blue);
-              call.set_cold_white_if_supported(coldwhite);
-              call.set_warm_white_if_supported(warmwhite);
+              if (has_rgb && color_modes.count(light::ColorMode::RGB) > 0) {
+                call.set_red_if_supported(red);
+                call.set_green_if_supported(green);
+                call.set_blue_if_supported(blue);
+              }
+
+              if (has_white && color_modes.count(light::ColorMode::COLOR_TEMPERATURE) > 0) {
+                call.set_color_temperature_if_supported((warm_white * obj->get_traits().get_max_mireds()) + (cold_white * obj->get_traits().get_min_mireds()));
+              } else if (has_white && color_modes.count(light::ColorMode::COLD_WARM_WHITE) > 0) {
+                call.set_cold_white_if_supported(cold_white);
+                call.set_warm_white_if_supported(warm_white);
+              } else if (has_white) {
+                call.set_white_if_supported(cold_white > warm_white ? cold_white : warm_white);
+              }
+
               call.perform();
             }
 #endif
