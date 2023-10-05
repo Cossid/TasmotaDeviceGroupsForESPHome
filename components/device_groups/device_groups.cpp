@@ -1130,7 +1130,7 @@ void device_groups::DeviceGroupsLoop(void) {
 
   static_multicast_listen_loop();
   for (multicast_packet packet : received_packets) {
-    std::string identifier(std::string(kDeviceGroupMessage) + this->device_group_name_);
+    std::string identifier(std::string(kDeviceGroupMessage) + this->device_group_name_ + '\0');
     if (!strncmp_P((char *) packet.payload, identifier.c_str(), identifier.length())) {
       ProcessGroupMessageResult status = ProcessDeviceGroupMessage(packet);
       if (status != PROCESS_GROUP_MESSAGE_UNMATCHED) {
@@ -1141,7 +1141,7 @@ void device_groups::DeviceGroupsLoop(void) {
     } else {
       bool isRegistered = false;
       for (std::string registered_group_name : registered_group_names) {
-        std::string identifier_registered(std::string(kDeviceGroupMessage) + registered_group_name);
+        std::string identifier_registered(std::string(kDeviceGroupMessage) + registered_group_name + '\0');
         if (!strncmp_P((char *) packet.payload, identifier_registered.c_str(), identifier_registered.length())) {
           isRegistered = true;
           break;
