@@ -547,7 +547,6 @@ void device_groups::SendReceiveDeviceGroupMessage(struct device_group *device_gr
             for (light::LightState *obj : this->lights_) {
               auto call = obj->make_call();
               call.set_brightness_if_supported(XdrvMailbox.payload / 255.0f);
-              call.set_color_brightness_if_supported(XdrvMailbox.payload / 255.0f);
               call.perform();
             }
 #endif
