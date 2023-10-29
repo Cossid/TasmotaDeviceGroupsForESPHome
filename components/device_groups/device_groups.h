@@ -271,7 +271,7 @@ class device_groups : public Component {
   void register_receive_mask(uint32_t receive_mask) { this->receive_mask_ = receive_mask; }
   void setup() override;
   void dump_config() override;
-  float get_setup_priority() const override { return setup_priority::HARDWARE; }
+  float get_setup_priority() const override { return setup_priority::AFTER_WIFI; }
 
   /// Send new values if they were updated.
   void loop() override;
