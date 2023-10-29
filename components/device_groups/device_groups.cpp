@@ -62,11 +62,11 @@ void device_groups::setup() {
 #ifdef USE_LIGHT
   for (light::LightState *obj : this->lights_) {
     obj->add_new_remote_values_callback([this, obj]() {
-      float red, green, blue, cold_white, warm_white, brightness = 0.0f;
+      float red = 0.0f, green = 0.0f, blue = 0.0f, cold_white = 0.0f, warm_white = 0.0f, brightness = 0.0f;
       brightness = obj->remote_values.get_brightness();
 
       if (obj->get_traits().supports_color_capability(light::ColorCapability::COLOR_TEMPERATURE)) {
-        float min_mireds, max_mireds, color_temperature;
+        float min_mireds = 0.0f, max_mireds = 0.0f, color_temperature = 0.0f;
         color_temperature = obj->remote_values.get_color_temperature();
         min_mireds = obj->get_traits().get_min_mireds();
         max_mireds = obj->get_traits().get_max_mireds();
