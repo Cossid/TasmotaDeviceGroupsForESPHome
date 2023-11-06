@@ -826,7 +826,7 @@ bool device_groups::_SendDeviceGroupMessage(int32_t device, DevGroupMessageType 
     bool shared;
     uint8_t item;
     uint32_t mask;
-    uint32_t value;
+    uint32_t value = 0;
     uint8_t *value_ptr;
     uint8_t *first_item_ptr = message_ptr;
     struct item *item_ptr;
