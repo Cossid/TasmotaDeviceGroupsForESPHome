@@ -54,8 +54,7 @@ void device_groups::setup() {
 #ifdef USE_SWITCH
   for (switch_::Switch *obj : this->switches_) {
     obj->add_on_state_callback([this, obj](bool state) {
-      SendDeviceGroupMessage(0, (DevGroupMessageType) (DGR_MSGTYP_UPDATE + DGR_MSGTYPFLAG_WITH_LOCAL), DGR_ITEM_POWER,
-                             state);
+      SendDeviceGroupMessage(0, (DevGroupMessageType) (DGR_MSGTYP_UPDATE), DGR_ITEM_POWER, state);
     });
   }
 #endif
@@ -95,16 +94,22 @@ void device_groups::setup() {
         red = green = blue = 0;
       }
 
-      uint8_t light_channels[6] = {(uint8_t) (red * 255),        (uint8_t) (green * 255),      (uint8_t) (blue * 255),
-                                   (uint8_t) (cold_white * 255), (uint8_t) (warm_white * 255), 0};
-      SendDeviceGroupMessage(0, (DevGroupMessageType) (DGR_MSGTYP_UPDATE_MORE_TO_COME + DGR_MSGTYPFLAG_WITH_LOCAL),
+      uint8_t light_channels[6] = {
+        (uint8_t)(red * 255),
+        (uint8_t)(green * 255),
+        (uint8_t)(blue * 255),
+        (uint8_t)(cold_white * 255),
+        (uint8_t)(warm_white * 255),
+        0
+      };
+      SendDeviceGroupMessage(0, (DevGroupMessageType) (DGR_MSGTYP_UPDATE_MORE_TO_COME),
                              DGR_ITEM_POWER, obj->remote_values.is_on());
       // If the light is turning off, don't send channel data, as ESPHome will have 0 for all channels in shut-off mode.
       if (obj->remote_values.is_on()) {
-        SendDeviceGroupMessage(0, (DevGroupMessageType) (DGR_MSGTYP_UPDATE_MORE_TO_COME + DGR_MSGTYPFLAG_WITH_LOCAL),
+        SendDeviceGroupMessage(0, (DevGroupMessageType) (DGR_MSGTYP_UPDATE_MORE_TO_COME),
                                DGR_ITEM_LIGHT_CHANNELS, light_channels);
       }
-      SendDeviceGroupMessage(0, (DevGroupMessageType) (DGR_MSGTYP_UPDATE + DGR_MSGTYPFLAG_WITH_LOCAL),
+      SendDeviceGroupMessage(0, (DevGroupMessageType) (DGR_MSGTYP_UPDATE),
                              DGR_ITEM_LIGHT_BRI, (uint8_t)(brightness * 255));
     });
   }
@@ -600,6 +605,66 @@ void device_groups::SendReceiveDeviceGroupMessage(struct device_group *device_gr
               }
 
               call.perform();
+            }
+#endif
+            break;
+          case DGR_ITEM_STATUS:
+#ifdef USE_SWITCH
+            for (switch_::Switch *obj : this->switches_) {
+              SendDeviceGroupMessage(0, (DevGroupMessageType) (DGR_MSGTYP_UPDATE), DGR_ITEM_POWER, obj->state);
+            }
+#endif
+#ifdef USE_LIGHT
+            for (light::LightState *obj : this->lights_) {
+              float red = 0.0f, green = 0.0f, blue = 0.0f, cold_white = 0.0f, warm_white = 0.0f, brightness = 0.0f;
+              brightness = obj->remote_values.get_brightness();
+
+              if (obj->get_traits().supports_color_capability(light::ColorCapability::COLOR_TEMPERATURE)) {
+                float min_mireds = 0.0f, max_mireds = 0.0f, color_temperature = 0.0f;
+                color_temperature = obj->remote_values.get_color_temperature();
+                min_mireds = obj->get_traits().get_min_mireds();
+                max_mireds = obj->get_traits().get_max_mireds();
+                warm_white = (color_temperature - min_mireds) / (max_mireds - min_mireds);
+                cold_white = 1.0f - warm_white;
+              } else if (obj->get_traits().supports_color_capability(light::ColorCapability::COLD_WARM_WHITE)) {
+                cold_white = obj->remote_values.get_cold_white();
+                warm_white = obj->remote_values.get_warm_white();
+              } else if (obj->get_traits().supports_color_capability(light::ColorCapability::WHITE)) {
+                warm_white = cold_white = obj->remote_values.get_white();
+              }
+              
+              if (obj->get_traits().supports_color_capability(light::ColorCapability::RGB)) {
+                red = obj->remote_values.get_red();
+                green = obj->remote_values.get_green();
+                blue = obj->remote_values.get_blue();
+              }
+              
+              auto color_mode = obj->remote_values.get_color_mode();
+
+              if (color_mode & light::ColorCapability::RGB) {
+                cold_white = warm_white = 0;
+              } else if (color_mode & light::ColorCapability::WHITE
+                        || color_mode & light::ColorCapability::COLOR_TEMPERATURE
+                        || color_mode & light::ColorCapability::COLD_WARM_WHITE) {
+                red = green = blue = 0;
+              }
+              uint8_t light_channels[6] = {
+                (uint8_t)(red * 255),
+                (uint8_t)(green * 255),
+                (uint8_t)(blue * 255),
+                (uint8_t)(cold_white * 255),
+                (uint8_t)(warm_white * 255),
+                0
+              };
+              SendDeviceGroupMessage(0, (DevGroupMessageType) (DGR_MSGTYP_UPDATE_MORE_TO_COME),
+                                    DGR_ITEM_POWER, obj->remote_values.is_on());
+              // If the light is turning off, don't send channel data, as ESPHome will have 0 for all channels in shut-off mode.
+              if (obj->remote_values.is_on()) {
+                SendDeviceGroupMessage(0, (DevGroupMessageType) (DGR_MSGTYP_UPDATE_MORE_TO_COME),
+                                      DGR_ITEM_LIGHT_CHANNELS, light_channels);
+              }
+              SendDeviceGroupMessage(0, (DevGroupMessageType) (DGR_MSGTYP_UPDATE),
+                                    DGR_ITEM_LIGHT_BRI, (uint8_t)(brightness * 255));
             }
 #endif
             break;
