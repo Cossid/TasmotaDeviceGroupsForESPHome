@@ -253,10 +253,12 @@ struct multicast_packet {
   IPAddress remoteIP;
 };
 
+#if defined(ESP8266)
 static WiFiUDP device_groups_udp;
 static std::vector<multicast_packet> received_packets{};
 static std::vector<std::string> registered_group_names{};
 static uint32_t packetId = 0;
+#endif
 
 class device_groups : public Component {
  public:
@@ -305,6 +307,9 @@ class device_groups : public Component {
   std::vector<light::LightState *> lights_{};
 #endif
 
+#if !defined(ESP8266)
+  WiFiUDP device_groups_udp;
+#endif
   struct device_group *device_groups_;
   uint32_t next_check_time;
   bool device_groups_initialized = false;

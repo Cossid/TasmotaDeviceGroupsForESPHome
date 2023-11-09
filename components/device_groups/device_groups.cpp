@@ -49,7 +49,9 @@ void device_groups::setup() {
   ESP_LOGCONFIG(TAG, "Setting up Device Groups Component for group %s", this->device_group_name_.c_str());
 
   std::string registered_group_name = this->device_group_name_;
+#if defined(ESP8266)
   registered_group_names.push_back(registered_group_name);
+#endif
 
 #ifdef USE_SWITCH
   for (switch_::Switch *obj : this->switches_) {
@@ -1174,7 +1176,11 @@ void device_groups::DeviceGroupStatus(uint8_t device_group_index) {
   }
 }
 
-static void static_multicast_listen_loop() {
+void device_groups::DeviceGroupsLoop(void) {
+  if (!device_groups_up || TasmotaGlobal.restart_flag)
+    return;
+
+#if defined(ESP8266)
   while (device_groups_udp.parsePacket()) {
     struct multicast_packet packet;
     int length = device_groups_udp.read(packet.payload, sizeof(packet.payload) - 1);
@@ -1186,13 +1192,7 @@ static void static_multicast_listen_loop() {
       received_packets.push_back(packet);
     }
   }
-}
 
-void device_groups::DeviceGroupsLoop(void) {
-  if (!device_groups_up || TasmotaGlobal.restart_flag)
-    return;
-
-  static_multicast_listen_loop();
   for (multicast_packet packet : received_packets) {
     std::string identifier(std::string(kDeviceGroupMessage) + this->device_group_name_ + '\0');
     if (!strncmp_P((char *) packet.payload, identifier.c_str(), identifier.length())) {
@@ -1219,6 +1219,21 @@ void device_groups::DeviceGroupsLoop(void) {
       }
     }
   }
+#else
+  while (device_groups_udp.parsePacket()) {
+    struct multicast_packet packet;
+    int length = device_groups_udp.read(packet.payload, sizeof(packet.payload) - 1);
+    if (length > 0) {
+      packet.id = 0; // Not used.
+      packet.payload[length] = 0;
+      packet.length = length;
+      packet.remoteIP = device_groups_udp.remoteIP();
+      if (!strncmp_P((char *)packet.payload, kDeviceGroupMessage, sizeof(DEVICE_GROUP_MESSAGE) - 1)) {
+        ProcessDeviceGroupMessage(packet);
+      }
+    }
+  }
+#endif
 
   uint32_t now = millis();
 
