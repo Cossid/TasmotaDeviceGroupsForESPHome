@@ -20,6 +20,7 @@
 #endif
 #ifdef USE_LIGHT
 #include "esphome/components/light/light_state.h"
+#include "esphome/components/light/color_mode.h"
 #endif
 
 namespace esphome {
@@ -324,6 +325,20 @@ class device_groups : public Component {
 
   uint8_t device_group_count = 0;
   bool first_device_group_is_local = true;
+
+#ifdef USE_LIGHT
+  void get_light_values(light::LightState *obj, bool &power_state, float &brightness, float &red, float &green, float &blue, float &cold_white, float &warm_white, esphome::light::ColorMode &color_mode);
+  void set_light_intial_values(light::LightState *obj);
+  bool previous_power_state = false;
+  float previous_brightness = 0.0f;
+  float previous_red = 0.0f;
+  float previous_green = 0.0f;
+  float previous_blue = 0.0f;
+  float previous_warm_white = 0.0f;
+  float previous_cold_white = 0.0f;
+  float previous_color_temperature = 0.0f;
+  esphome::light::ColorMode previous_color_mode = esphome::light::ColorMode::UNKNOWN;
+#endif
 };
 
 }  // namespace device_groups
