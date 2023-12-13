@@ -113,6 +113,7 @@ void device_groups::setup() {
 #endif
 }
 
+#ifdef USE_LIGHT
 void device_groups::get_light_values(light::LightState *obj, bool &power_state, float &brightness, float &red, float &green, float &blue, float &cold_white, float &warm_white, esphome::light::ColorMode &color_mode) {
   power_state = obj->remote_values.is_on();
   brightness = obj->remote_values.get_brightness();
@@ -163,6 +164,7 @@ void device_groups::set_light_intial_values(light::LightState *obj) {
   previous_warm_white = warm_white;
   previous_color_mode = color_mode;
 }
+#endif
 
 void device_groups::dump_config() {
   ESP_LOGCONFIG(TAG, "Device Group %s configuration:", this->device_group_name_.c_str());
