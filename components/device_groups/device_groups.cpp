@@ -1410,6 +1410,7 @@ bool device_groups::XdrvCall(uint8_t Function) {
 
 void device_groups::ExecuteCommandPower(uint32_t device, uint32_t state, uint32_t source) {
   power_t mask = 1 << (device - 1);  // Device to control
+  power_t old_power = TasmotaGlobal.power;
   if (state <= POWER_TOGGLE) {
     switch (state) {
       case POWER_OFF: {
@@ -1424,6 +1425,14 @@ void device_groups::ExecuteCommandPower(uint32_t device, uint32_t state, uint32_
     }
   }
 
+  if (TasmotaGlobal.power != old_power && SRC_REMOTE != source && SRC_RETRY != source) {
+    power_t dgr_power = TasmotaGlobal.power;
+    if (Settings->flag4.multiple_device_groups) {  // SetOption88 - Enable relays in separate device groups
+      dgr_power = (dgr_power >> (device - 1)) & 1;
+    }
+    SendDeviceGroupMessage(device, DGR_MSGTYP_UPDATE, DGR_ITEM_POWER, dgr_power);
+  }
+
   if (dgr_state < DGR_STATE_INITIALIZED) {
     return;
   }
@@ -1435,7 +1444,6 @@ void device_groups::ExecuteCommandPower(uint32_t device, uint32_t state, uint32_
     } else {
       obj->turn_off();
     }
-    obj->publish_state(TasmotaGlobal.power);
   }
 #endif
 #ifdef USE_LIGHT
