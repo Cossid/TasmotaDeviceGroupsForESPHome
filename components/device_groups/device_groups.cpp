@@ -56,7 +56,7 @@ void device_groups::setup() {
 #ifdef USE_SWITCH
   for (switch_::Switch *obj : this->switches_) {
     obj->add_on_state_callback([this, obj](bool state) {
-      SendDeviceGroupMessage(0, (DevGroupMessageType) (DGR_MSGTYP_UPDATE), DGR_ITEM_POWER, state);
+      ExecuteCommandPower(1, state, SRC_SWITCH);
     });
   }
 #endif
@@ -72,8 +72,7 @@ void device_groups::setup() {
       get_light_values(obj, power_state, brightness, red, green, blue, cold_white, warm_white, color_mode);
 
       if (power_state != previous_power_state) {
-        SendDeviceGroupMessage(0, (DevGroupMessageType) (DGR_MSGTYP_UPDATE),
-                              DGR_ITEM_POWER, power_state);          
+        ExecuteCommandPower(1, power_state, SRC_LIGHT);
       }
 
       if (red != previous_red
@@ -91,12 +90,12 @@ void device_groups::setup() {
           0
         };
 
-        SendDeviceGroupMessage(0, (DevGroupMessageType) (DGR_MSGTYP_UPDATE),
+        SendDeviceGroupMessage(1, (DevGroupMessageType) (DGR_MSGTYP_UPDATE),
                               DGR_ITEM_LIGHT_CHANNELS, light_channels);
       }
       
       if (brightness != previous_brightness) {
-        SendDeviceGroupMessage(0, (DevGroupMessageType) (DGR_MSGTYP_UPDATE + DGR_MSGTYPFLAG_WITH_LOCAL),
+        SendDeviceGroupMessage(1, (DevGroupMessageType) (DGR_MSGTYP_UPDATE + DGR_MSGTYPFLAG_WITH_LOCAL),
                               DGR_ITEM_LIGHT_BRI, (uint8_t)(brightness * 255));
       }
 
@@ -662,7 +661,7 @@ void device_groups::SendReceiveDeviceGroupMessage(struct device_group *device_gr
           case DGR_ITEM_STATUS:
 #ifdef USE_SWITCH
             for (switch_::Switch *obj : this->switches_) {
-              SendDeviceGroupMessage(0, (DevGroupMessageType) (DGR_MSGTYP_UPDATE), DGR_ITEM_POWER, obj->state);
+              SendDeviceGroupMessage(1, (DevGroupMessageType) (DGR_MSGTYP_UPDATE), DGR_ITEM_POWER, obj->state);
             }
 #endif
 #ifdef USE_LIGHT
@@ -707,14 +706,14 @@ void device_groups::SendReceiveDeviceGroupMessage(struct device_group *device_gr
                 (uint8_t)(warm_white * 255),
                 0
               };
-              SendDeviceGroupMessage(0, (DevGroupMessageType) (DGR_MSGTYP_UPDATE_MORE_TO_COME),
+              SendDeviceGroupMessage(1, (DevGroupMessageType) (DGR_MSGTYP_UPDATE_MORE_TO_COME),
                                     DGR_ITEM_POWER, obj->remote_values.is_on());
               // If the light is turning off, don't send channel data, as ESPHome will have 0 for all channels in shut-off mode.
               if (obj->remote_values.is_on()) {
-                SendDeviceGroupMessage(0, (DevGroupMessageType) (DGR_MSGTYP_UPDATE_MORE_TO_COME),
+                SendDeviceGroupMessage(1, (DevGroupMessageType) (DGR_MSGTYP_UPDATE_MORE_TO_COME),
                                       DGR_ITEM_LIGHT_CHANNELS, light_channels);
               }
-              SendDeviceGroupMessage(0, (DevGroupMessageType) (DGR_MSGTYP_UPDATE),
+              SendDeviceGroupMessage(1, (DevGroupMessageType) (DGR_MSGTYP_UPDATE),
                                     DGR_ITEM_LIGHT_BRI, (uint8_t)(brightness * 255));
             }
 #endif
@@ -1437,21 +1436,23 @@ void device_groups::ExecuteCommandPower(uint32_t device, uint32_t state, uint32_
     return;
   }
 
+  if (SRC_REMOTE == source) {
 #ifdef USE_SWITCH
-  for (switch_::Switch *obj : this->switches_) {
-    if (TasmotaGlobal.power > 0) {
-      obj->turn_on();
-    } else {
-      obj->turn_off();
+    for (switch_::Switch *obj : this->switches_) {
+      if (TasmotaGlobal.power > 0) {
+        obj->turn_on();
+      } else {
+        obj->turn_off();
+      }
     }
-  }
 #endif
 #ifdef USE_LIGHT
-  for (light::LightState *obj : this->lights_) {
-    auto call = TasmotaGlobal.power > 0 ? obj->turn_on() : obj->turn_off();
-    call.perform();
+    for (light::LightState *obj : this->lights_) {
+      auto call = TasmotaGlobal.power > 0 ? obj->turn_on() : obj->turn_off();
+      call.perform();
   }
 #endif
+  }
 }
 
 void device_groups::ExecuteCommand(const char *cmnd, uint32_t source) { return; }
