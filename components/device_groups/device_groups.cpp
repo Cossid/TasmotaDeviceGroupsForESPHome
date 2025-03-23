@@ -66,20 +66,24 @@ void device_groups::setup() {
 
     obj->add_new_remote_values_callback([this, obj]() {
       bool power_state;
-      float brightness, red, green, blue, cold_white, warm_white;
+      float brightness, color_brightness, red, green, blue, cold_white, warm_white;
       esphome::light::ColorMode color_mode;
 
-      get_light_values(obj, power_state, brightness, red, green, blue, cold_white, warm_white, color_mode);
+      get_light_values(obj, power_state, brightness, color_brightness, red, green, blue, cold_white, warm_white, color_mode);
 
       if (power_state != previous_power_state) {
         ExecuteCommandPower(1, power_state, SRC_LIGHT);
       }
 
-      if (red != previous_red
+      if (power_state != previous_power_state
+          ||red != previous_red
           || green != previous_green
           || blue != previous_blue
           || warm_white != previous_warm_white
           || cold_white != previous_cold_white
+          || brightness != previous_brightness
+          || color_brightness != previous_color_brightness
+          || color_mode != previous_color_mode
       ) {
         uint8_t light_channels[6] = {
           (uint8_t)(red * 255),
@@ -93,7 +97,7 @@ void device_groups::setup() {
         SendDeviceGroupMessage(1, (DevGroupMessageType) (DGR_MSGTYP_UPDATE),
                               DGR_ITEM_LIGHT_CHANNELS, light_channels);
       }
-      
+
       if (brightness != previous_brightness) {
         SendDeviceGroupMessage(1, (DevGroupMessageType) (DGR_MSGTYP_UPDATE + DGR_MSGTYPFLAG_WITH_LOCAL),
                               DGR_ITEM_LIGHT_BRI, (uint8_t)(brightness * 255));
@@ -101,6 +105,7 @@ void device_groups::setup() {
 
       previous_power_state = power_state;
       previous_brightness = brightness;
+      previous_color_brightness = color_brightness;
       previous_red = red;
       previous_green = green;
       previous_blue = blue;
@@ -113,9 +118,10 @@ void device_groups::setup() {
 }
 
 #ifdef USE_LIGHT
-void device_groups::get_light_values(light::LightState *obj, bool &power_state, float &brightness, float &red, float &green, float &blue, float &cold_white, float &warm_white, esphome::light::ColorMode &color_mode) {
+void device_groups::get_light_values(light::LightState *obj, bool &power_state, float &brightness, float &color_brightness, float &red, float &green, float &blue, float &cold_white, float &warm_white, esphome::light::ColorMode &color_mode) {
   power_state = obj->remote_values.is_on();
   brightness = obj->remote_values.get_brightness();
+  color_brightness = obj->remote_values.get_color_brightness();
 
   if (obj->get_traits().supports_color_capability(light::ColorCapability::COLOR_TEMPERATURE)) {
     float min_mireds = 0.0f, max_mireds = 0.0f, color_temperature = 0.0f;
@@ -130,32 +136,47 @@ void device_groups::get_light_values(light::LightState *obj, bool &power_state, 
   } else if (obj->get_traits().supports_color_capability(light::ColorCapability::WHITE)) {
     warm_white = cold_white = obj->remote_values.get_white();
   }
-  
-  if (obj->get_traits().supports_color_capability(light::ColorCapability::RGB)) {
+
+  if (obj->get_traits().supports_color_capability(light::ColorCapability::RGB) && color_brightness > 0) {
     red = obj->remote_values.get_red();
     green = obj->remote_values.get_green();
     blue = obj->remote_values.get_blue();
   }
-  
+
   color_mode = obj->remote_values.get_color_mode();
 
-  if (color_mode & light::ColorCapability::RGB) {
-    cold_white = warm_white = 0;
-  } else if (color_mode & light::ColorCapability::WHITE
-            || color_mode & light::ColorCapability::COLOR_TEMPERATURE
-            || color_mode & light::ColorCapability::COLD_WARM_WHITE) {
+  bool has_rgb_mode = color_mode & light::ColorCapability::RGB;
+  bool has_white_mode = color_mode & light::ColorCapability::WHITE
+      || color_mode & light::ColorCapability::COLOR_TEMPERATURE
+      || color_mode & light::ColorCapability::COLD_WARM_WHITE;
+  bool has_rgb_values = red > 0 || green > 0 || blue > 0;
+  bool has_white_values = warm_white > 0 || cold_white > 0;
+
+  if ((!has_rgb_mode && has_rgb_values) || has_rgb_mode && !has_rgb_values) {
     red = green = blue = 0;
+    color_brightness - 0;
+    color_mode = (light::ColorMode)(static_cast<uint8_t>(color_mode) ^ static_cast<uint8_t>(light::ColorCapability::RGB));
+    has_rgb_mode = has_rgb_values = false;
+  }
+
+  if ((!has_white_mode && has_white_values) || (has_white_mode && !has_white_values)) {
+    warm_white = cold_white = 0;
+    color_mode = (light::ColorMode)(static_cast<uint8_t>(color_mode) ^ static_cast<uint8_t>(light::ColorCapability::WHITE));
+    color_mode = (light::ColorMode)(static_cast<uint8_t>(color_mode) ^ static_cast<uint8_t>(light::ColorCapability::COLOR_TEMPERATURE));
+    color_mode = (light::ColorMode)(static_cast<uint8_t>(color_mode) ^ static_cast<uint8_t>(light::ColorCapability::COLD_WARM_WHITE));
+    has_white_mode = has_white_values = false;
   }
 }
 
 void device_groups::set_light_intial_values(light::LightState *obj) {
   bool power_state;
-  float brightness, red, green, blue, cold_white, warm_white;
+  float brightness, color_brightness, red, green, blue, cold_white, warm_white;
   esphome::light::ColorMode color_mode = esphome::light::ColorMode::UNKNOWN;
-  get_light_values(obj, power_state, brightness, red, green, blue, cold_white, warm_white, color_mode);
+  get_light_values(obj, power_state, brightness, color_brightness, red, green, blue, cold_white, warm_white, color_mode);
 
   previous_power_state = power_state;
   previous_brightness = brightness;
+  previous_color_brightness = color_brightness;
   previous_red = red;
   previous_green = green;
   previous_blue = blue;
@@ -601,7 +622,12 @@ void device_groups::SendReceiveDeviceGroupMessage(struct device_group *device_gr
 #ifdef USE_LIGHT
             for (light::LightState *obj : this->lights_) {
               auto call = obj->make_call();
-              call.set_brightness_if_supported(XdrvMailbox.payload / 255.0f);
+              if (obj->remote_values.get_color_mode() & light::ColorCapability::RGB) {
+                call.set_color_brightness_if_supported(XdrvMailbox.payload / 255.0f);
+              } else {
+                call.set_brightness_if_supported(XdrvMailbox.payload / 255.0f);
+                call.set_color_brightness_if_supported(0);
+              }
               call.perform();
             }
 #endif
@@ -610,7 +636,6 @@ void device_groups::SendReceiveDeviceGroupMessage(struct device_group *device_gr
 #ifdef USE_LIGHT
             for (light::LightState *obj : this->lights_) {
               auto call = obj->make_call();
-              auto color_modes = obj->get_traits().get_supported_color_modes();
               const float red = (uint8_t) XdrvMailbox.data[0] / 255.0f;
               const float green = (uint8_t) XdrvMailbox.data[1] / 255.0f;
               const float blue = (uint8_t) XdrvMailbox.data[2] / 255.0f;
@@ -618,40 +643,42 @@ void device_groups::SendReceiveDeviceGroupMessage(struct device_group *device_gr
               const float warm_white = (uint8_t) XdrvMailbox.data[4] / 255.0f;
               const bool has_rgb = red + green + blue > 0.0f;
               const bool has_white = cold_white + warm_white > 0.0f;
+              light::ColorMode color_mode = light::ColorMode::ON_OFF | light::ColorMode::BRIGHTNESS;
 
-              if (has_white && has_rgb && color_modes.count(light::ColorMode::RGB_COLOR_TEMPERATURE) > 0) {
-                call.set_color_mode_if_supported(light::ColorMode::RGB_COLOR_TEMPERATURE);
-              } else if (has_white && has_rgb && color_modes.count(light::ColorMode::RGB_COLD_WARM_WHITE) > 0) {
-                call.set_color_mode_if_supported(light::ColorMode::RGB_COLD_WARM_WHITE);
-              } else if (has_white && has_rgb && color_modes.count(light::ColorMode::RGB_WHITE) > 0) {
-                call.set_color_mode_if_supported(light::ColorMode::RGB_WHITE);
-              } else if (has_white && !has_rgb && color_modes.count(light::ColorMode::COLOR_TEMPERATURE) > 0) {
-                call.set_color_mode_if_supported(light::ColorMode::COLOR_TEMPERATURE);
-              } else if (has_white && !has_rgb && color_modes.count(light::ColorMode::COLD_WARM_WHITE) > 0) {
-                call.set_color_mode_if_supported(light::ColorMode::COLD_WARM_WHITE);
-              } else if (has_rgb && color_modes.count(light::ColorMode::RGB) > 0) {
-                call.set_color_mode_if_supported(light::ColorMode::RGB);
-              } else if (color_modes.count(light::ColorMode::WHITE) > 0) {
-                call.set_color_mode_if_supported(light::ColorMode::WHITE);
-              } else if (color_modes.count(light::ColorMode::BRIGHTNESS) > 0) {
-                call.set_color_mode_if_supported(light::ColorMode::BRIGHTNESS);
-              } else {
-                call.set_color_mode_if_supported(light::ColorMode::ON_OFF);
+              if (has_rgb && obj->get_traits().supports_color_capability(light::ColorCapability::RGB)) {
+                color_mode = color_mode | light::ColorCapability::RGB;
               }
 
-              if (has_rgb && color_modes.count(light::ColorMode::RGB) > 0) {
+              if (has_white && obj->get_traits().supports_color_capability(light::ColorCapability::COLOR_TEMPERATURE)) {
+                color_mode = color_mode | light::ColorCapability::COLOR_TEMPERATURE;
+              } else if (has_white && obj->get_traits().supports_color_capability(light::ColorCapability::COLD_WARM_WHITE)) {
+                color_mode = color_mode | light::ColorCapability::COLD_WARM_WHITE;
+              } else if (has_white && obj->get_traits().supports_color_capability(light::ColorCapability::WHITE)) {
+                color_mode = color_mode | light::ColorCapability::WHITE;
+              }
+
+              call.set_color_mode_if_supported(color_mode);
+
+              if (color_mode & light::ColorCapability::RGB) {
                 call.set_red_if_supported(red);
                 call.set_green_if_supported(green);
                 call.set_blue_if_supported(blue);
+              } else {
+                call.set_red_if_supported(0);
+                call.set_green_if_supported(0);
+                call.set_blue_if_supported(0);
+                call.set_color_brightness_if_supported(0);
               }
 
-              if (has_white && color_modes.count(light::ColorMode::COLOR_TEMPERATURE) > 0) {
+              if (has_white && color_mode & light::ColorCapability::COLOR_TEMPERATURE) {
                 call.set_color_temperature_if_supported((warm_white * obj->get_traits().get_max_mireds()) + (cold_white * obj->get_traits().get_min_mireds()));
-              } else if (has_white && color_modes.count(light::ColorMode::COLD_WARM_WHITE) > 0) {
+              } else if (has_white && color_mode & light::ColorCapability::COLD_WARM_WHITE) {
                 call.set_cold_white_if_supported(cold_white);
                 call.set_warm_white_if_supported(warm_white);
               } else if (has_white) {
                 call.set_white_if_supported(cold_white > warm_white ? cold_white : warm_white);
+              } else {
+                call.set_white_if_supported(0);
               }
 
               call.perform();
@@ -666,8 +693,9 @@ void device_groups::SendReceiveDeviceGroupMessage(struct device_group *device_gr
 #endif
 #ifdef USE_LIGHT
             for (light::LightState *obj : this->lights_) {
-              float red = 0.0f, green = 0.0f, blue = 0.0f, cold_white = 0.0f, warm_white = 0.0f, brightness = 0.0f;
+              float red = 0.0f, green = 0.0f, blue = 0.0f, cold_white = 0.0f, warm_white = 0.0f, brightness = 0.0f, color_brightness = 0.0f;
               brightness = obj->remote_values.get_brightness();
+              color_brightness = obj->remote_values.get_color_brightness();
 
               if (obj->get_traits().supports_color_capability(light::ColorCapability::COLOR_TEMPERATURE)) {
                 float min_mireds = 0.0f, max_mireds = 0.0f, color_temperature = 0.0f;
@@ -682,22 +710,24 @@ void device_groups::SendReceiveDeviceGroupMessage(struct device_group *device_gr
               } else if (obj->get_traits().supports_color_capability(light::ColorCapability::WHITE)) {
                 warm_white = cold_white = obj->remote_values.get_white();
               }
-              
-              if (obj->get_traits().supports_color_capability(light::ColorCapability::RGB)) {
+
+              if (color_brightness > 0 && obj->get_traits().supports_color_capability(light::ColorCapability::RGB)) {
                 red = obj->remote_values.get_red();
                 green = obj->remote_values.get_green();
                 blue = obj->remote_values.get_blue();
               }
-              
+
               auto color_mode = obj->remote_values.get_color_mode();
 
-              if (color_mode & light::ColorCapability::RGB) {
+              if (color_mode == light::ColorMode::RGB) {
                 cold_white = warm_white = 0;
-              } else if (color_mode & light::ColorCapability::WHITE
-                        || color_mode & light::ColorCapability::COLOR_TEMPERATURE
-                        || color_mode & light::ColorCapability::COLD_WARM_WHITE) {
+              } else if (color_mode == light::ColorMode::WHITE
+                        || color_mode == light::ColorMode::COLOR_TEMPERATURE
+                        || color_mode == light::ColorMode::COLD_WARM_WHITE) {
                 red = green = blue = 0;
+                color_brightness = 0;
               }
+
               uint8_t light_channels[6] = {
                 (uint8_t)(red * 255),
                 (uint8_t)(green * 255),

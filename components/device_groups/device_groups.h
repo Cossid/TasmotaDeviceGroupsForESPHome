@@ -327,10 +327,11 @@ class device_groups : public Component {
   bool first_device_group_is_local = true;
 
 #ifdef USE_LIGHT
-  void get_light_values(light::LightState *obj, bool &power_state, float &brightness, float &red, float &green, float &blue, float &cold_white, float &warm_white, esphome::light::ColorMode &color_mode);
+  void get_light_values(light::LightState *obj, bool &power_state, float &brightness, float &color_brightness, float &red, float &green, float &blue, float &cold_white, float &warm_white, esphome::light::ColorMode &color_mode);
   void set_light_intial_values(light::LightState *obj);
   bool previous_power_state = false;
   float previous_brightness = 0.0f;
+  float previous_color_brightness = 0.0f;
   float previous_red = 0.0f;
   float previous_green = 0.0f;
   float previous_blue = 0.0f;

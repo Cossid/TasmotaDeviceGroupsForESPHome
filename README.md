@@ -51,12 +51,13 @@ If you want combinations, you just add them together, same as Tasmota.  For exam
 * Power States
 * Light States
   * On/Off
-  * Brightness
+  * Brightness (color_interlock: true required for RGBW, or you will not get RGB brightness control)
   * Color channels
 * Send/Receive masking
 
 ### Not yet supported
 
+* Color Brightness on RGBW lights without color_interlock
 * Fade/Transitions/Speed
 * Schemes
 * Commands (ESPHome doesn't have a direct equivalent)
@@ -111,6 +112,7 @@ Button is just an example, but you could hook into any of the `on_` events for `
 
 * Multiple relays in the same group cannot currently be individually addressed, so an action against the group will apply to all entities in the group on ESPHome.  [Issue #2](https://github.com/Cossid/TasmotaDeviceGroupsForESPHome/issues/2) will track the potential resolution for this.  As a workaround, you can enable SetOption88 on Tasmota and assign individual groups.  While Tasmota by default is limited to 4 groups, ESPHome has no limit.
 * Does not currently work with ESP-IDF framework, as it lacks an arduino-compatible upd multicast library.  Support may come eventually, but for the time being, arduino-based frameworks are required.
+* ESPHome handles brightness between RGB and White channels differently, and both modes cannot be supported at the same time.  As a result, RGB brightness cannot currently be supported for RGBW bulbs without color_interlock.
 
 ### Misc
 
