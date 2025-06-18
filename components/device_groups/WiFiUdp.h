@@ -8,7 +8,13 @@
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
+
+// Include IPAddress definition for ESP-IDF builds
+#if defined(USE_ESP_IDF)
 #include "esphome/components/network/ip_address.h"
+#else
+#include <WiFi.h>  // For Arduino framework
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -233,6 +239,4 @@ private:
 
 #ifdef __cplusplus
 }
-#endif
-
-#endif // WIFI_UDP_H 
+#endif 
