@@ -1373,7 +1373,11 @@ void device_groups::DeviceGroupsLoop(void) {
 #else
           device_groups_udp.remoteIP();
 #endif
+#if defined(USE_ESP_IDF)
+      if (!strncmp((char *)packet.payload, kDeviceGroupMessage, sizeof(DEVICE_GROUP_MESSAGE) - 1)) {
+#else
       if (!strncmp_P((char *)packet.payload, kDeviceGroupMessage, sizeof(DEVICE_GROUP_MESSAGE) - 1)) {
+#endif
         ProcessDeviceGroupMessage(packet);
       }
     }
@@ -1564,3 +1568,5 @@ void device_groups::InitTasmotaCompatibility() {
 
 }  // namespace device_groups
 }  // namespace esphome
+
+
