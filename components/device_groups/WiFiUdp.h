@@ -1,5 +1,6 @@
 #pragma once
 
+#include "esphome/components/network/ip_address.h"
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -8,13 +9,6 @@
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
-
-// Include IPAddress definition for ESP-IDF builds
-#if defined(USE_ESP_IDF)
-#include "esphome/components/network/ip_address.h"
-#else
-#include <WiFi.h>  // For Arduino framework
-#endif
 
 #ifdef __cplusplus
 extern "C" {
