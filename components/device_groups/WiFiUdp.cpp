@@ -364,10 +364,17 @@ const char* WiFiUDP::remoteIP() {
     return ip_str;
 }
 
+#if defined(USE_ESP_IDF)
 esphome::IPAddress WiFiUDP::remoteIPAddress() {
     uint32_t ip = ntohl(remote_addr.sin_addr.s_addr);
-    return esphome::IPAddress((ip >> 24) & 0xFF, (ip >> 16) & 0xFF, (ip >> 8) & 0xFF, ip & 0xFF);
+    return esphome::IPAddress(
+        (ip >> 24) & 0xFF,
+        (ip >> 16) & 0xFF,
+        (ip >> 8) & 0xFF,
+        ip & 0xFF
+    );
 }
+#endif
 
 uint16_t WiFiUDP::remotePort() {
     return ntohs(remote_addr.sin_port);

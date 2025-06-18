@@ -10,6 +10,19 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#if defined(USE_ESP_IDF)
+namespace esphome {
+class IPAddress {
+public:
+    uint8_t bytes[4];
+    IPAddress() : bytes{0,0,0,0} {}
+    IPAddress(uint8_t a, uint8_t b, uint8_t c, uint8_t d) : bytes{a,b,c,d} {}
+    uint8_t& operator[](int i) { return bytes[i]; }
+    const uint8_t& operator[](int i) const { return bytes[i]; }
+};
+}
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
