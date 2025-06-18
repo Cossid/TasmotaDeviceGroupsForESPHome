@@ -25,12 +25,6 @@ public:
     }
     bool operator!=(const IPAddress& other) const { return !(*this == other); }
 };
-}
-#endif
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 /**
  * @brief WiFiUDP class that provides ESPHome-compatible UDP functionality for ESP-IDF
@@ -211,13 +205,13 @@ public:
     bool connected();
     
     /**
-     * @brief Set the timeout for receive operations
+     * @brief Set timeout for socket operations
      * @param timeout_ms Timeout in milliseconds
      */
     void setTimeout(int timeout_ms);
     
     /**
-     * @brief Get the local port
+     * @brief Get the local port number
      * @return Local port number
      */
     uint16_t localPort();
@@ -230,24 +224,31 @@ public:
 
 private:
     /**
-     * @brief Initialize the socket
+     * @brief Initialize the UDP socket
      * @return true if successful, false otherwise
      */
     bool initSocket();
     
     /**
-     * @brief Set socket options for UDP
+     * @brief Set socket options
      * @return true if successful, false otherwise
      */
     bool setSocketOptions();
     
     /**
-     * @brief Convert IP address from uint32_t to string
+     * @brief Convert IP address to string
      * @param ip IP address as uint32_t
      * @return IP address as string
      */
     static const char* ipToString(uint32_t ip);
 };
+
+} // namespace esphome
+#endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #ifdef __cplusplus
 }

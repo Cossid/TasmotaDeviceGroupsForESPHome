@@ -3,6 +3,9 @@
 #include <netdb.h>
 #include <ifaddrs.h>
 
+#if defined(USE_ESP_IDF)
+namespace esphome {
+
 // Default buffer size for UDP packets
 #define DEFAULT_BUFFER_SIZE 1024
 
@@ -217,6 +220,8 @@ bool WiFiUDP::endPacket() {
     
     // Reset buffer for next packet
     data_length = 0;
+    read_position = 0;
+    
     return true;
 }
 
@@ -364,7 +369,6 @@ const char* WiFiUDP::remoteIP() {
     return ip_str;
 }
 
-#if defined(USE_ESP_IDF)
 esphome::IPAddress WiFiUDP::remoteIPAddress() {
     uint32_t ip = ntohl(remote_addr.sin_addr.s_addr);
     return esphome::IPAddress(
@@ -374,7 +378,6 @@ esphome::IPAddress WiFiUDP::remoteIPAddress() {
         ip & 0xFF
     );
 }
-#endif
 
 uint16_t WiFiUDP::remotePort() {
     return ntohs(remote_addr.sin_port);
@@ -444,4 +447,7 @@ const char* WiFiUDP::ipToString(uint32_t ip) {
     addr.s_addr = htonl(ip);
     inet_ntop(AF_INET, &addr, ip_str, INET_ADDRSTRLEN);
     return ip_str;
-} 
+}
+
+} // namespace esphome
+#endif 
