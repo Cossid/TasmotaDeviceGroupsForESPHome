@@ -9,6 +9,13 @@
 #include <esp_wifi.h>
 #if defined(USE_ESP_IDF)
 #include "WiFiUdp.h"  // Use local WiFiUdp.h for ESP-IDF
+// Forward declaration for IPAddress if not already defined for ESP-IDF builds
+#ifndef IPAddress
+namespace esphome {
+class IPAddress;
+}
+using IPAddress = esphome::IPAddress;
+#endif
 #else
 #include <WiFiUdp.h>  // Use ESPHome WiFiUdp.h for ESP32
 #endif
