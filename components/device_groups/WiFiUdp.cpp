@@ -19,7 +19,6 @@ public:
     bool operator!=(const IPAddress& other) const { return !(*this == other); }
 };
 }
-#endif
 
 // Default buffer size for UDP packets
 #define DEFAULT_BUFFER_SIZE 1024
@@ -221,11 +220,11 @@ bool WiFiUDP::beginPacket(const esphome::IPAddress& ip, uint16_t port) {
 }
 
 bool WiFiUDP::endPacket() {
-    if (sock_fd < 0 || !buffer) {
+    if (sock_fd < 0) {
         return false;
     }
     
-    ssize_t sent = sendto(sock_fd, buffer, data_length, 0, 
+    ssize_t sent = sendto(sock_fd, buffer, data_length, 0,
                          (struct sockaddr*)&remote_addr, sizeof(remote_addr));
     
     if (sent < 0) {
@@ -250,6 +249,7 @@ size_t WiFiUDP::write(uint8_t byte) {
     }
     
     if (data_length >= buffer_size) {
+        // Resize buffer if needed
         size_t new_size = buffer_size * 2;
         char* new_buffer = (char*)realloc(buffer, new_size);
         if (!new_buffer) {
@@ -272,8 +272,9 @@ size_t WiFiUDP::write(const uint8_t* data, size_t size) {
         }
     }
     
-    if (data_length + size > buffer_size) {
-        size_t new_size = buffer_size + size;
+    // Ensure buffer is large enough
+    while (data_length + size > buffer_size) {
+        size_t new_size = buffer_size * 2;
         char* new_buffer = (char*)realloc(buffer, new_size);
         if (!new_buffer) {
             return 0;
@@ -296,62 +297,45 @@ int WiFiUDP::parsePacket() {
         return 0;
     }
     
-    // Free previous buffer if exists
-    if (buffer) {
-        free(buffer);
-        buffer = nullptr;
-    }
-    
-    buffer = (char*)malloc(DEFAULT_BUFFER_SIZE);
-    buffer_size = DEFAULT_BUFFER_SIZE;
+    // Allocate buffer if not already done
     if (!buffer) {
-        return 0;
+        buffer = (char*)malloc(DEFAULT_BUFFER_SIZE);
+        buffer_size = DEFAULT_BUFFER_SIZE;
+        if (!buffer) {
+            return 0;
+        }
     }
     
     struct sockaddr_in sender_addr;
     socklen_t sender_len = sizeof(sender_addr);
     
-    ssize_t received = recvfrom(sock_fd, buffer, buffer_size, 0, 
+    ssize_t received = recvfrom(sock_fd, buffer, buffer_size - 1, MSG_DONTWAIT,
                                (struct sockaddr*)&sender_addr, &sender_len);
     
-    if (received < 0) {
-        if (errno == EAGAIN || errno == EWOULDBLOCK) {
-            // No data available (non-blocking socket)
-            free(buffer);
-            buffer = nullptr;
-            return 0;
-        }
-        printf("Failed to receive UDP packet: %s\n", strerror(errno));
-        free(buffer);
-        buffer = nullptr;
-        return 0;
+    if (received > 0) {
+        data_length = received;
+        read_position = 0;
+        buffer[data_length] = '\0';  // Null-terminate for string operations
+        
+        // Store sender info for remoteIP() and remotePort()
+        remote_addr = sender_addr;
+        
+        return data_length;
     }
     
-    // Store sender information
-    remote_addr = sender_addr;
-    data_length = received;
-    read_position = 0;
-    
-    return received;
-}
-
-int WiFiUDP::available() {
-    if (!buffer || read_position >= data_length) {
-        return 0;
-    }
-    return data_length - read_position;
+    return 0;
 }
 
 int WiFiUDP::read() {
-    if (!buffer || read_position >= data_length) {
+    if (read_position >= data_length) {
         return -1;
     }
     return (int)(unsigned char)buffer[read_position++];
 }
 
 int WiFiUDP::read(uint8_t* data, size_t size) {
-    if (!buffer || read_position >= data_length) {
-        return 0;
+    if (read_position >= data_length) {
+        return -1;
     }
     
     size_t available = data_length - read_position;
@@ -368,30 +352,29 @@ int WiFiUDP::read(char* data, size_t size) {
 }
 
 int WiFiUDP::peek() {
-    if (!buffer || read_position >= data_length) {
+    if (read_position >= data_length) {
         return -1;
     }
     return (int)(unsigned char)buffer[read_position];
 }
 
 void WiFiUDP::flush() {
-    read_position = data_length;
+    // For UDP, flush doesn't really apply, but we can clear the receive buffer
+    data_length = 0;
+    read_position = 0;
 }
 
 const char* WiFiUDP::remoteIP() {
-    static char ip_str[INET_ADDRSTRLEN];
-    inet_ntop(AF_INET, &remote_addr.sin_addr, ip_str, INET_ADDRSTRLEN);
+    static char ip_str[16];
+    struct in_addr addr;
+    addr.s_addr = remote_addr.sin_addr.s_addr;
+    inet_ntop(AF_INET, &addr, ip_str, sizeof(ip_str));
     return ip_str;
 }
 
 esphome::IPAddress WiFiUDP::remoteIPAddress() {
     uint32_t ip = ntohl(remote_addr.sin_addr.s_addr);
-    return esphome::IPAddress(
-        (ip >> 24) & 0xFF,
-        (ip >> 16) & 0xFF,
-        (ip >> 8) & 0xFF,
-        ip & 0xFF
-    );
+    return esphome::IPAddress((ip >> 24) & 0xFF, (ip >> 16) & 0xFF, (ip >> 8) & 0xFF, ip & 0xFF);
 }
 
 uint16_t WiFiUDP::remotePort() {
@@ -425,30 +408,23 @@ uint16_t WiFiUDP::localPort() {
 }
 
 const char* WiFiUDP::localIP() {
-    static char ip_str[INET_ADDRSTRLEN];
-    
-    if (sock_fd < 0) {
-        return "0.0.0.0";
-    }
-    
+    static char ip_str[16];
     struct ifaddrs *ifaddr, *ifa;
+    
     if (getifaddrs(&ifaddr) == -1) {
         return "0.0.0.0";
     }
     
-    // Find the first non-loopback interface with an IPv4 address
-    for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
-        if (ifa->ifa_addr == NULL) {
+    for (ifa = ifaddr; ifa != nullptr; ifa = ifa->ifa_next) {
+        if (ifa->ifa_addr == nullptr || ifa->ifa_addr->sa_family != AF_INET) {
             continue;
         }
         
-        if (ifa->ifa_addr->sa_family == AF_INET) {
-            struct sockaddr_in* addr = (struct sockaddr_in*)ifa->ifa_addr;
-            if (ntohl(addr->sin_addr.s_addr) != INADDR_LOOPBACK) {
-                inet_ntop(AF_INET, &addr->sin_addr, ip_str, INET_ADDRSTRLEN);
-                freeifaddrs(ifaddr);
-                return ip_str;
-            }
+        struct sockaddr_in* addr = (struct sockaddr_in*)ifa->ifa_addr;
+        if (addr->sin_addr.s_addr != INADDR_ANY && addr->sin_addr.s_addr != INADDR_LOOPBACK) {
+            inet_ntop(AF_INET, &addr->sin_addr, ip_str, sizeof(ip_str));
+            freeifaddrs(ifaddr);
+            return ip_str;
         }
     }
     
@@ -456,13 +432,16 @@ const char* WiFiUDP::localIP() {
     return "0.0.0.0";
 }
 
+int WiFiUDP::available() {
+    return data_length - read_position;
+}
+
 const char* WiFiUDP::ipToString(uint32_t ip) {
-    static char ip_str[INET_ADDRSTRLEN];
+    static char ip_str[16];
     struct in_addr addr;
     addr.s_addr = htonl(ip);
-    inet_ntop(AF_INET, &addr, ip_str, INET_ADDRSTRLEN);
+    inet_ntop(AF_INET, &addr, ip_str, sizeof(ip_str));
     return ip_str;
 }
 
-} // namespace esphome
-#endif 
+#endif // defined(USE_ESP_IDF) 
