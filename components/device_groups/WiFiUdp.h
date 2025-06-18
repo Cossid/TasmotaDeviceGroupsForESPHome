@@ -25,6 +25,12 @@ public:
     }
     bool operator!=(const IPAddress& other) const { return !(*this == other); }
 };
+}
+#endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**
  * @brief WiFiUDP class that provides ESPHome-compatible UDP functionality for ESP-IDF
@@ -242,13 +248,6 @@ private:
      */
     static const char* ipToString(uint32_t ip);
 };
-
-} // namespace esphome
-#endif
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 #ifdef __cplusplus
 }
