@@ -113,6 +113,40 @@ bool WiFiUDP::beginMulticast(uint16_t port, const char* multicast_ip, const char
     return true;
 }
 
+bool WiFiUDP::beginMulticast(const esphome::IPAddress& multicast_ip, uint16_t port) {
+    if (!initSocket()) {
+        return false;
+    }
+    
+    struct sockaddr_in local_addr;
+    memset(&local_addr, 0, sizeof(local_addr));
+    local_addr.sin_family = AF_INET;
+    local_addr.sin_addr.s_addr = INADDR_ANY;
+    local_addr.sin_port = htons(port);
+    
+    if (bind(sock_fd, (struct sockaddr*)&local_addr, sizeof(local_addr)) < 0) {
+        printf("Failed to bind UDP socket to port %d: %s\n", port, strerror(errno));
+        close(sock_fd);
+        sock_fd = -1;
+        return false;
+    }
+    
+    // Join multicast group
+    struct ip_mreq mreq;
+    mreq.imr_multiaddr.s_addr = htonl((multicast_ip[0] << 24) | (multicast_ip[1] << 16) | (multicast_ip[2] << 8) | multicast_ip[3]);
+    mreq.imr_interface.s_addr = INADDR_ANY;  // Use default interface
+    
+    if (setsockopt(sock_fd, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq)) < 0) {
+        printf("Failed to join multicast group: %s\n", strerror(errno));
+        close(sock_fd);
+        sock_fd = -1;
+        return false;
+    }
+    
+    is_connected = true;
+    return true;
+}
+
 void WiFiUDP::stop() {
     if (sock_fd >= 0) {
         close(sock_fd);
@@ -150,6 +184,19 @@ bool WiFiUDP::beginPacket(uint32_t ip, uint16_t port) {
     }
     
     remote_addr.sin_addr.s_addr = htonl(ip);
+    remote_addr.sin_port = htons(port);
+    
+    return true;
+}
+
+bool WiFiUDP::beginPacket(const esphome::IPAddress& ip, uint16_t port) {
+    if (sock_fd < 0) {
+        if (!initSocket()) {
+            return false;
+        }
+    }
+    
+    remote_addr.sin_addr.s_addr = htonl((ip[0] << 24) | (ip[1] << 16) | (ip[2] << 8) | ip[3]);
     remote_addr.sin_port = htons(port);
     
     return true;
@@ -315,6 +362,11 @@ const char* WiFiUDP::remoteIP() {
     static char ip_str[INET_ADDRSTRLEN];
     inet_ntop(AF_INET, &remote_addr.sin_addr, ip_str, INET_ADDRSTRLEN);
     return ip_str;
+}
+
+esphome::IPAddress WiFiUDP::remoteIPAddress() {
+    uint32_t ip = ntohl(remote_addr.sin_addr.s_addr);
+    return esphome::IPAddress((ip >> 24) & 0xFF, (ip >> 16) & 0xFF, (ip >> 8) & 0xFF, ip & 0xFF);
 }
 
 uint16_t WiFiUDP::remotePort() {

@@ -59,6 +59,14 @@ public:
     bool beginMulticast(uint16_t port, const char* multicast_ip, const char* interface_ip);
     
     /**
+     * @brief Begin UDP communication with multicast support (IPAddress overload)
+     * @param multicast_ip The multicast IP address as IPAddress
+     * @param port The port number to bind to
+     * @return true if successful, false otherwise
+     */
+    bool beginMulticast(const esphome::IPAddress& multicast_ip, uint16_t port);
+    
+    /**
      * @brief Stop UDP communication and close socket
      */
     void stop();
@@ -78,6 +86,14 @@ public:
      * @return true if successful, false otherwise
      */
     bool beginPacket(uint32_t ip, uint16_t port);
+    
+    /**
+     * @brief Begin packet transmission to specified IP and port
+     * @param ip The destination IP address as IPAddress
+     * @param port The destination port
+     * @return true if successful, false otherwise
+     */
+    bool beginPacket(const esphome::IPAddress& ip, uint16_t port);
     
     /**
      * @brief End packet transmission and send data
@@ -157,6 +173,12 @@ public:
      * @return IP address as string
      */
     const char* remoteIP();
+    
+    /**
+     * @brief Get the remote IP address of the received packet
+     * @return IP address as IPAddress object
+     */
+    esphome::IPAddress remoteIPAddress();
     
     /**
      * @brief Get the remote port of the received packet
