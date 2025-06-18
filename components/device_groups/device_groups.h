@@ -8,40 +8,14 @@
 #include <esp_wifi.h>
 #if defined(USE_ESP_IDF)
 #include "WiFiUdp.h"  // Use local WiFiUdp.h for ESP-IDF
-// Define custom IPAddress type for ESP-IDF builds
-namespace esphome {
-class IPAddress {
-private:
-    uint8_t address[4];
-public:
-    IPAddress() { address[0] = address[1] = address[2] = address[3] = 0; }
-    IPAddress(uint8_t a, uint8_t b, uint8_t c, uint8_t d) { address[0] = a; address[1] = b; address[2] = c; address[3] = d; }
-    IPAddress(uint32_t ip) { 
-        address[0] = (ip >> 24) & 0xFF;
-        address[1] = (ip >> 16) & 0xFF;
-        address[2] = (ip >> 8) & 0xFF;
-        address[3] = ip & 0xFF;
-    }
-    uint8_t& operator[](int index) { return address[index]; }
-    const uint8_t& operator[](int index) const { return address[index]; }
-    bool operator==(const IPAddress& other) const {
-        return address[0] == other.address[0] && address[1] == other.address[1] && 
-               address[2] == other.address[2] && address[3] == other.address[3];
-    }
-    bool operator!=(const IPAddress& other) const { return !(*this == other); }
-};
-}
 #else
 #include <WiFiUdp.h>  // Use ESPHome WiFiUdp.h for ESP32
-#include "esphome/components/network/ip_address.h"
 #endif
 #elif USE_ESP8266
 #include <ESP8266WiFi.h>
 #include <WiFiUdp.h>
-#include "esphome/components/network/ip_address.h"
 #else
 #include <WiFi.h>
-#include "esphome/components/network/ip_address.h"
 #endif
 
 #ifdef USE_SWITCH

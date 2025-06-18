@@ -19,6 +19,11 @@ public:
     IPAddress(uint8_t a, uint8_t b, uint8_t c, uint8_t d) : bytes{a,b,c,d} {}
     uint8_t& operator[](int i) { return bytes[i]; }
     const uint8_t& operator[](int i) const { return bytes[i]; }
+    bool operator==(const IPAddress& other) const {
+        return bytes[0] == other.bytes[0] && bytes[1] == other.bytes[1] && 
+               bytes[2] == other.bytes[2] && bytes[3] == other.bytes[3];
+    }
+    bool operator!=(const IPAddress& other) const { return !(*this == other); }
 };
 }
 #endif
