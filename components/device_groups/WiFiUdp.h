@@ -1,5 +1,4 @@
-#ifndef WIFI_UDP_H
-#define WIFI_UDP_H
+#pragma once
 
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -9,6 +8,7 @@
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "esphome/components/network/ip_address.h"
 
 #ifdef __cplusplus
 extern "C" {
