@@ -1,9 +1,10 @@
 #include "WiFiUdp.h"
 #include <fcntl.h>
 #include <netdb.h>
-#include <ifaddrs.h>
 
 #if defined(USE_ESP_IDF)
+#include "esp_wifi.h"
+#include "esp_netif.h"
 namespace esphome {
 class IPAddress {
 public:
@@ -409,26 +410,27 @@ uint16_t WiFiUDP::localPort() {
 
 const char* WiFiUDP::localIP() {
     static char ip_str[16];
-    struct ifaddrs *ifaddr, *ifa;
     
-    if (getifaddrs(&ifaddr) == -1) {
-        return "0.0.0.0";
+    // Get the default network interface (usually WiFi STA)
+    esp_netif_t* netif = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
+    if (netif == nullptr) {
+        // Try to get any available network interface
+        esp_netif_t* netif_list[CONFIG_ESP_NETIF_MAX_INTERFACES];
+        int netif_count = esp_netif_get_nr_of_ifs();
+        if (netif_count > 0) {
+            esp_netif_get_netif_impl_name_list(netif_list);
+            netif = netif_list[0];
+        }
     }
     
-    for (ifa = ifaddr; ifa != nullptr; ifa = ifa->ifa_next) {
-        if (ifa->ifa_addr == nullptr || ifa->ifa_addr->sa_family != AF_INET) {
-            continue;
-        }
-        
-        struct sockaddr_in* addr = (struct sockaddr_in*)ifa->ifa_addr;
-        if (addr->sin_addr.s_addr != INADDR_ANY && addr->sin_addr.s_addr != INADDR_LOOPBACK) {
-            inet_ntop(AF_INET, &addr->sin_addr, ip_str, sizeof(ip_str));
-            freeifaddrs(ifaddr);
+    if (netif != nullptr) {
+        esp_netif_ip_info_t ip_info;
+        if (esp_netif_get_ip_info(netif, &ip_info) == ESP_OK) {
+            inet_ntop(AF_INET, &ip_info.ip.addr, ip_str, sizeof(ip_str));
             return ip_str;
         }
     }
     
-    freeifaddrs(ifaddr);
     return "0.0.0.0";
 }
 

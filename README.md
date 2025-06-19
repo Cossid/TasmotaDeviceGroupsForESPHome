@@ -120,6 +120,11 @@ This component now includes full ESP-IDF support through a custom WiFiUDP implem
 - Native ESP-IDF socket operations
 - Automatic conditional compilation (uses local WiFiUdp.h when `USE_ESP_IDF` is defined)
 
+**ESP-IDF Compilation Fix:**
+- Fixed `ifaddrs.h` dependency issue by replacing `getifaddrs()` with ESP-IDF's `esp_netif_get_ip_info()` API
+- Added proper ESP-IDF includes (`esp_wifi.h`, `esp_netif.h`) with conditional compilation
+- Updated `localIP()` method to use ESP-IDF network interface API instead of POSIX ifaddrs
+
 ### Arduino Framework Support
 
 The component continues to support Arduino-based frameworks (ESP32 Arduino, ESP8266 Arduino) using the standard WiFiUDP libraries.
