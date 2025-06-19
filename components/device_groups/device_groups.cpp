@@ -333,17 +333,10 @@ bool device_groups::DeviceGroupsStart() {
       return false;
     }
 #else
-#if defined(USE_ESP_IDF)
     if (!device_groups_udp.beginMulticast(IPAddress(DEVICE_GROUPS_ADDRESS), DEVICE_GROUPS_PORT)) {
       ESP_LOGE(TAG, "Error subscribing");
       return false;
     }
-#else
-    if (!device_groups_udp.beginMulticast(IPAddress(DEVICE_GROUPS_ADDRESS), DEVICE_GROUPS_PORT)) {
-      ESP_LOGE(TAG, "Error subscribing");
-      return false;
-    }
-#endif
 #endif
     device_groups_up = true;
 
@@ -855,7 +848,7 @@ bool device_groups::_SendDeviceGroupMessage(int32_t device, DevGroupMessageType 
   message_type = (DevGroupMessageType) (message_type & 0x7F);
 
   // If we're currently processing a remote device message, ignore this request.
-  if (ignore_dgr_sends && message_type != DGR_MSGTYPE_UPDATE_COMMAND)
+  if (ignore_dgr_sends && message_type != DGR_MSGTYP_UPDATE_COMMAND)
     return 0;
 
   // If device is < 0, the device group index is the device negated. If not, get the device group
