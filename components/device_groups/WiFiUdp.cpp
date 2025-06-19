@@ -5,21 +5,6 @@
 #if defined(USE_ESP_IDF)
 #include "esp_wifi.h"
 #include "esp_netif.h"
-namespace esphome {
-class IPAddress {
-public:
-    uint8_t bytes[4];
-    IPAddress() : bytes{0,0,0,0} {}
-    IPAddress(uint8_t a, uint8_t b, uint8_t c, uint8_t d) : bytes{a,b,c,d} {}
-    uint8_t& operator[](int i) { return bytes[i]; }
-    const uint8_t& operator[](int i) const { return bytes[i]; }
-    bool operator==(const IPAddress& other) const {
-        return bytes[0] == other.bytes[0] && bytes[1] == other.bytes[1] && 
-               bytes[2] == other.bytes[2] && bytes[3] == other.bytes[3];
-    }
-    bool operator!=(const IPAddress& other) const { return !(*this == other); }
-};
-}
 
 // Default buffer size for UDP packets
 #define DEFAULT_BUFFER_SIZE 1024
@@ -415,11 +400,21 @@ const char* WiFiUDP::localIP() {
     esp_netif_t* netif = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
     if (netif == nullptr) {
         // Try to get any available network interface
-        esp_netif_t* netif_list[CONFIG_ESP_NETIF_MAX_INTERFACES];
+        esp_netif_t* netif_list[4]; // Use a reasonable default size
         int netif_count = esp_netif_get_nr_of_ifs();
-        if (netif_count > 0) {
-            esp_netif_get_netif_impl_name_list(netif_list);
-            netif = netif_list[0];
+        if (netif_count > 0 && netif_count <= 4) {
+            // Get the first available interface
+            esp_netif_t* default_netif = esp_netif_get_default_netif();
+            if (default_netif != nullptr) {
+                netif = default_netif;
+            } else {
+                // Fallback: try to get any interface
+                esp_netif_t* current_netif = nullptr;
+                esp_netif_t* temp_netif = esp_netif_next(nullptr);
+                if (temp_netif != nullptr) {
+                    netif = temp_netif;
+                }
+            }
         }
     }
     
