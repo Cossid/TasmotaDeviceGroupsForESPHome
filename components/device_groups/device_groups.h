@@ -12,7 +12,7 @@
 #if defined(USE_ESP_IDF)
 #include "WiFiUdp.h"  // Use local WiFiUdp.h for ESP-IDF
 #else
-#include <WiFiUdp.h>  // Use ESPHome WiFiUdp.h for ESP32
+#include <WiFiUdp.h>  // Use system WiFiUdp.h for Arduino framework
 #endif
 #elif USE_ESP8266
 #include <ESP8266WiFi.h>
