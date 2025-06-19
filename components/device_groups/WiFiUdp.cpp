@@ -1,8 +1,9 @@
+#if defined(USE_ESP_IDF)
+
 #include "WiFiUdp.h"
 #include <fcntl.h>
 #include <netdb.h>
 
-#if defined(USE_ESP_IDF)
 #include "esp_wifi.h"
 #include "esp_netif.h"
 
@@ -116,7 +117,7 @@ bool WiFiUDP::beginMulticast(uint16_t port, const char* multicast_ip, const char
     return true;
 }
 
-bool WiFiUDP::beginMulticast(const esphome::IPAddress& multicast_ip, uint16_t port) {
+bool WiFiUDP::beginMulticast(const IPAddress& multicast_ip, uint16_t port) {
     if (!initSocket()) {
         return false;
     }
@@ -192,7 +193,7 @@ bool WiFiUDP::beginPacket(uint32_t ip, uint16_t port) {
     return true;
 }
 
-bool WiFiUDP::beginPacket(const esphome::IPAddress& ip, uint16_t port) {
+bool WiFiUDP::beginPacket(const IPAddress& ip, uint16_t port) {
     if (sock_fd < 0) {
         if (!initSocket()) {
             return false;
@@ -358,9 +359,9 @@ const char* WiFiUDP::remoteIP() {
     return ip_str;
 }
 
-esphome::IPAddress WiFiUDP::remoteIPAddress() {
+IPAddress WiFiUDP::remoteIPAddress() {
     uint32_t ip = ntohl(remote_addr.sin_addr.s_addr);
-    return esphome::IPAddress((ip >> 24) & 0xFF, (ip >> 16) & 0xFF, (ip >> 8) & 0xFF, ip & 0xFF);
+    return IPAddress((ip >> 24) & 0xFF, (ip >> 16) & 0xFF, (ip >> 8) & 0xFF, ip & 0xFF);
 }
 
 uint16_t WiFiUDP::remotePort() {
@@ -441,4 +442,4 @@ const char* WiFiUDP::ipToString(uint32_t ip) {
     return ip_str;
 }
 
-#endif // defined(USE_ESP_IDF) 
+#endif  // USE_ESP_IDF 
