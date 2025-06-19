@@ -1315,12 +1315,7 @@ void device_groups::DeviceGroupsLoop(void) {
       packet.id = packetId++;
       packet.payload[length] = 0;
       packet.length = length;
-      packet.remoteIP = 
-#if defined(USE_ESP_IDF)
-          device_groups_udp.remoteIPAddress();
-#else
-          device_groups_udp.remoteIP();
-#endif
+      packet.remoteIP = device_groups_udp.remoteIP();
       received_packets.push_back(packet);
     }
   }
@@ -1367,12 +1362,7 @@ void device_groups::DeviceGroupsLoop(void) {
       packet.id = 0; // Not used.
       packet.payload[length] = 0;
       packet.length = length;
-      packet.remoteIP = 
-#if defined(USE_ESP_IDF)
-          device_groups_udp.remoteIPAddress();
-#else
-          device_groups_udp.remoteIP();
-#endif
+      packet.remoteIP = device_groups_udp.remoteIP();
 #if defined(USE_ESP_IDF)
       if (!strncmp((char *)packet.payload, kDeviceGroupMessage, sizeof(DEVICE_GROUP_MESSAGE) - 1)) {
 #else

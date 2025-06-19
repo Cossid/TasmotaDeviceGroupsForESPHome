@@ -184,17 +184,12 @@ public:
      */
     void flush();
     
-    /**
-     * @brief Get the remote IP address of the received packet
-     * @return IP address as string
-     */
-    const char* remoteIP();
     
     /**
      * @brief Get the remote IP address of the received packet
      * @return IP address as IPAddress object
      */
-    IPAddress remoteIPAddress();
+    IPAddress remoteIP();
     
     /**
      * @brief Get the remote port of the received packet

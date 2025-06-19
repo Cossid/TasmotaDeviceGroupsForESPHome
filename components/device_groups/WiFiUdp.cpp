@@ -351,15 +351,8 @@ void WiFiUDP::flush() {
     read_position = 0;
 }
 
-const char* WiFiUDP::remoteIP() {
-    static char ip_str[16];
-    struct in_addr addr;
-    addr.s_addr = remote_addr.sin_addr.s_addr;
-    inet_ntop(AF_INET, &addr, ip_str, sizeof(ip_str));
-    return ip_str;
-}
 
-IPAddress WiFiUDP::remoteIPAddress() {
+IPAddress WiFiUDP::remoteIP() {
     uint32_t ip = ntohl(remote_addr.sin_addr.s_addr);
     return IPAddress((ip >> 24) & 0xFF, (ip >> 16) & 0xFF, (ip >> 8) & 0xFF, ip & 0xFF);
 }
