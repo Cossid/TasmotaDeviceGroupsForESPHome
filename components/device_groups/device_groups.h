@@ -186,7 +186,7 @@ enum ProcessGroupMessageResult {
 
 struct device_group_member {
   struct device_group_member *flink;
-  esphome::IPAddress ip_address;
+  IPAddress ip_address;
   uint16_t received_sequence;
   uint16_t acked_sequence;
   uint32_t unicast_count;
@@ -257,7 +257,7 @@ struct multicast_packet {
   uint32_t id;
   int length;
   uint8_t payload[512];
-  esphome::IPAddress remoteIP;
+  IPAddress remoteIP;
 };
 
 #if defined(ESP8266)

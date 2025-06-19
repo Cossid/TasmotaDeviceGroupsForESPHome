@@ -11,7 +11,6 @@
 #include <stdlib.h>
 
 #if defined(USE_ESP_IDF)
-namespace esphome {
 class IPAddress {
 public:
     uint8_t bytes[4];
@@ -25,7 +24,6 @@ public:
     }
     bool operator!=(const IPAddress& other) const { return !(*this == other); }
 };
-}
 #endif
 
 #ifdef __cplusplus
@@ -82,7 +80,7 @@ public:
      * @param port The port number to bind to
      * @return true if successful, false otherwise
      */
-    bool beginMulticast(const esphome::IPAddress& multicast_ip, uint16_t port);
+    bool beginMulticast(const IPAddress& multicast_ip, uint16_t port);
     
     /**
      * @brief Stop UDP communication and close socket
@@ -111,7 +109,7 @@ public:
      * @param port The destination port
      * @return true if successful, false otherwise
      */
-    bool beginPacket(const esphome::IPAddress& ip, uint16_t port);
+    bool beginPacket(const IPAddress& ip, uint16_t port);
     
     /**
      * @brief End packet transmission and send data
@@ -196,7 +194,7 @@ public:
      * @brief Get the remote IP address of the received packet
      * @return IP address as IPAddress object
      */
-    esphome::IPAddress remoteIPAddress();
+    IPAddress remoteIPAddress();
     
     /**
      * @brief Get the remote port of the received packet
