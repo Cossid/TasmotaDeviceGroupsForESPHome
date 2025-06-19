@@ -3,6 +3,9 @@
 #include "esphome/core/application.h"
 #include "esphome/core/component.h"
 #include <vector>
+#if !defined(USE_ESP_IDF)
+#include "esphome/components/network/ip_address.h"
+#endif
 
 #if defined(USE_ESP32)
 #include <esp_wifi.h>
