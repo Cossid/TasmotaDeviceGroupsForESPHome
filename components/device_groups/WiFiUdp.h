@@ -1,3 +1,5 @@
+#if defined(USE_ESP_IDF)
+
 #pragma once
 
 #include "esphome/components/network/ip_address.h"
@@ -10,7 +12,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#if defined(USE_ESP_IDF)
 class IPAddress {
 public:
     uint8_t bytes[4];
@@ -24,7 +25,6 @@ public:
     }
     bool operator!=(const IPAddress& other) const { return !(*this == other); }
 };
-#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -250,3 +250,5 @@ private:
 #ifdef __cplusplus
 }
 #endif 
+
+#endif  // USE_ESP_IDF 
