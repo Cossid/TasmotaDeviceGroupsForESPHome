@@ -848,7 +848,7 @@ bool device_groups::_SendDeviceGroupMessage(int32_t device, DevGroupMessageType 
   message_type = (DevGroupMessageType) (message_type & 0x7F);
 
   // If we're currently processing a remote device message, ignore this request.
-  if (ignore_dgr_sends && message_type != DGR_MSGTYP_UPDATE_COMMAND)
+  if (ignore_dgr_sends && message_type != DGR_MSGTYPE_UPDATE_COMMAND)
     return 0;
 
   // If device is < 0, the device group index is the device negated. If not, get the device group

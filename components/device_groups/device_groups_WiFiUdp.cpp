@@ -403,7 +403,7 @@ const char* device_groups_WiFiUDP::localIP() {
             } else {
                 // Fallback: try to get any interface
                 esp_netif_t* current_netif = nullptr;
-                esp_netif_t* temp_netif = esp_netif_next(nullptr);
+                esp_netif_t* temp_netif = esp_netif_next_unsafe(nullptr);
                 if (temp_netif != nullptr) {
                     netif = temp_netif;
                 }
