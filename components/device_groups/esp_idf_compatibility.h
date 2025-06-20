@@ -6,6 +6,9 @@
 // ESP-IDF compatibility for Arduino PROGMEM functions
 #define PSTR(str) (str)
 
+// ESP-IDF compatibility for sprintf_P (PROGMEM version of sprintf)
+#define sprintf_P sprintf
+
 // ESP-IDF compatibility for snprintf_P (PROGMEM version of snprintf)
 #define snprintf_P snprintf
 
