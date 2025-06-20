@@ -313,13 +313,13 @@ class device_groups : public Component {
   std::vector<light::LightState *> lights_{};
 #endif
 
-#if !defined(ESP8266)
+
 #if defined(USE_ESP_IDF)
   device_groups_WiFiUDP device_groups_udp;
-#else
+#elif !defined(ESP8266)
   WiFiUDP device_groups_udp;
 #endif
-#endif
+
   struct device_group *device_groups_;
   uint32_t next_check_time;
   bool device_groups_initialized = false;
