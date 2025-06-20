@@ -31,13 +31,13 @@ extern "C" {
 #endif
 
 /**
- * @brief WiFiUDP class that provides ESPHome-compatible UDP functionality for ESP-IDF
+ * @brief device_groups_WiFiUDP class that provides ESPHome-compatible UDP functionality for ESP-IDF
  * 
  * This wrapper implements the ESPHome WiFiUDP interface using ESP-IDF's native
  * socket API, allowing components that depend on ESPHome's WiFiUdp.h to work
  * with ESP-IDF without modification.
  */
-class WiFiUDP {
+class device_groups_WiFiUDP {
 private:
     int sock_fd;
     struct sockaddr_in remote_addr;
@@ -51,12 +51,12 @@ public:
     /**
      * @brief Default constructor
      */
-    WiFiUDP();
+    device_groups_WiFiUDP();
     
     /**
      * @brief Destructor
      */
-    ~WiFiUDP();
+    ~device_groups_WiFiUDP();
     
     /**
      * @brief Begin UDP communication on specified port
@@ -183,7 +183,6 @@ public:
      * @brief Flush the receive buffer
      */
     void flush();
-    
     
     /**
      * @brief Get the remote IP address of the received packet

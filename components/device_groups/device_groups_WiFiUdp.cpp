@@ -1,6 +1,6 @@
 #if defined(USE_ESP_IDF)
 
-#include "WiFiUdp.h"
+#include "device_groups_WiFiUdp.h"
 #include <fcntl.h>
 #include <netdb.h>
 
@@ -10,13 +10,13 @@
 // Default buffer size for UDP packets
 #define DEFAULT_BUFFER_SIZE 1024
 
-WiFiUDP::WiFiUDP() : sock_fd(-1), is_connected(false), buffer(nullptr), 
+device_groups_WiFiUDP::device_groups_WiFiUDP() : sock_fd(-1), is_connected(false), buffer(nullptr), 
                      buffer_size(0), data_length(0), read_position(0) {
     memset(&remote_addr, 0, sizeof(remote_addr));
     remote_addr.sin_family = AF_INET;
 }
 
-WiFiUDP::~WiFiUDP() {
+device_groups_WiFiUDP::~device_groups_WiFiUDP() {
     stop();
     if (buffer) {
         free(buffer);
@@ -24,7 +24,7 @@ WiFiUDP::~WiFiUDP() {
     }
 }
 
-bool WiFiUDP::initSocket() {
+bool device_groups_WiFiUDP::initSocket() {
     if (sock_fd >= 0) {
         close(sock_fd);
     }
@@ -38,7 +38,7 @@ bool WiFiUDP::initSocket() {
     return setSocketOptions();
 }
 
-bool WiFiUDP::setSocketOptions() {
+bool device_groups_WiFiUDP::setSocketOptions() {
     // Set socket to non-blocking mode
     int flags = fcntl(sock_fd, F_GETFL, 0);
     if (flags < 0) {
@@ -61,7 +61,7 @@ bool WiFiUDP::setSocketOptions() {
     return true;
 }
 
-bool WiFiUDP::begin(uint16_t port) {
+bool device_groups_WiFiUDP::begin(uint16_t port) {
     if (!initSocket()) {
         return false;
     }
@@ -83,7 +83,7 @@ bool WiFiUDP::begin(uint16_t port) {
     return true;
 }
 
-bool WiFiUDP::beginMulticast(uint16_t port, const char* multicast_ip, const char* interface_ip) {
+bool device_groups_WiFiUDP::beginMulticast(uint16_t port, const char* multicast_ip, const char* interface_ip) {
     if (!initSocket()) {
         return false;
     }
@@ -117,7 +117,7 @@ bool WiFiUDP::beginMulticast(uint16_t port, const char* multicast_ip, const char
     return true;
 }
 
-bool WiFiUDP::beginMulticast(const IPAddress& multicast_ip, uint16_t port) {
+bool device_groups_WiFiUDP::beginMulticast(const IPAddress& multicast_ip, uint16_t port) {
     if (!initSocket()) {
         return false;
     }
@@ -151,7 +151,7 @@ bool WiFiUDP::beginMulticast(const IPAddress& multicast_ip, uint16_t port) {
     return true;
 }
 
-void WiFiUDP::stop() {
+void device_groups_WiFiUDP::stop() {
     if (sock_fd >= 0) {
         close(sock_fd);
         sock_fd = -1;
@@ -167,7 +167,7 @@ void WiFiUDP::stop() {
     read_position = 0;
 }
 
-bool WiFiUDP::beginPacket(const char* ip, uint16_t port) {
+bool device_groups_WiFiUDP::beginPacket(const char* ip, uint16_t port) {
     if (sock_fd < 0) {
         if (!initSocket()) {
             return false;
@@ -180,7 +180,7 @@ bool WiFiUDP::beginPacket(const char* ip, uint16_t port) {
     return true;
 }
 
-bool WiFiUDP::beginPacket(uint32_t ip, uint16_t port) {
+bool device_groups_WiFiUDP::beginPacket(uint32_t ip, uint16_t port) {
     if (sock_fd < 0) {
         if (!initSocket()) {
             return false;
@@ -193,7 +193,7 @@ bool WiFiUDP::beginPacket(uint32_t ip, uint16_t port) {
     return true;
 }
 
-bool WiFiUDP::beginPacket(const IPAddress& ip, uint16_t port) {
+bool device_groups_WiFiUDP::beginPacket(const IPAddress& ip, uint16_t port) {
     if (sock_fd < 0) {
         if (!initSocket()) {
             return false;
@@ -206,13 +206,13 @@ bool WiFiUDP::beginPacket(const IPAddress& ip, uint16_t port) {
     return true;
 }
 
-bool WiFiUDP::endPacket() {
+bool device_groups_WiFiUDP::endPacket() {
     if (sock_fd < 0) {
         return false;
     }
     
     ssize_t sent = sendto(sock_fd, buffer, data_length, 0,
-                         (struct sockaddr*)&remote_addr, sizeof(remote_addr));
+                          (struct sockaddr*)&remote_addr, sizeof(remote_addr));
     
     if (sent < 0) {
         printf("Failed to send UDP packet: %s\n", strerror(errno));
@@ -226,7 +226,7 @@ bool WiFiUDP::endPacket() {
     return true;
 }
 
-size_t WiFiUDP::write(uint8_t byte) {
+size_t device_groups_WiFiUDP::write(uint8_t byte) {
     if (!buffer) {
         buffer = (char*)malloc(DEFAULT_BUFFER_SIZE);
         buffer_size = DEFAULT_BUFFER_SIZE;
@@ -250,7 +250,7 @@ size_t WiFiUDP::write(uint8_t byte) {
     return 1;
 }
 
-size_t WiFiUDP::write(const uint8_t* data, size_t size) {
+size_t device_groups_WiFiUDP::write(const uint8_t* data, size_t size) {
     if (!buffer) {
         buffer = (char*)malloc(DEFAULT_BUFFER_SIZE);
         buffer_size = DEFAULT_BUFFER_SIZE;
@@ -275,11 +275,11 @@ size_t WiFiUDP::write(const uint8_t* data, size_t size) {
     return size;
 }
 
-size_t WiFiUDP::write(const char* str) {
+size_t device_groups_WiFiUDP::write(const char* str) {
     return write((const uint8_t*)str, strlen(str));
 }
 
-int WiFiUDP::parsePacket() {
+int device_groups_WiFiUDP::parsePacket() {
     if (sock_fd < 0) {
         return 0;
     }
@@ -313,14 +313,14 @@ int WiFiUDP::parsePacket() {
     return 0;
 }
 
-int WiFiUDP::read() {
+int device_groups_WiFiUDP::read() {
     if (read_position >= data_length) {
         return -1;
     }
     return (int)(unsigned char)buffer[read_position++];
 }
 
-int WiFiUDP::read(uint8_t* data, size_t size) {
+int device_groups_WiFiUDP::read(uint8_t* data, size_t size) {
     if (read_position >= data_length) {
         return -1;
     }
@@ -334,38 +334,37 @@ int WiFiUDP::read(uint8_t* data, size_t size) {
     return to_read;
 }
 
-int WiFiUDP::read(char* data, size_t size) {
+int device_groups_WiFiUDP::read(char* data, size_t size) {
     return read((uint8_t*)data, size);
 }
 
-int WiFiUDP::peek() {
+int device_groups_WiFiUDP::peek() {
     if (read_position >= data_length) {
         return -1;
     }
     return (int)(unsigned char)buffer[read_position];
 }
 
-void WiFiUDP::flush() {
+void device_groups_WiFiUDP::flush() {
     // For UDP, flush doesn't really apply, but we can clear the receive buffer
     data_length = 0;
     read_position = 0;
 }
 
-
-IPAddress WiFiUDP::remoteIP() {
+IPAddress device_groups_WiFiUDP::remoteIP() {
     uint32_t ip = ntohl(remote_addr.sin_addr.s_addr);
     return IPAddress((ip >> 24) & 0xFF, (ip >> 16) & 0xFF, (ip >> 8) & 0xFF, ip & 0xFF);
 }
 
-uint16_t WiFiUDP::remotePort() {
+uint16_t device_groups_WiFiUDP::remotePort() {
     return ntohs(remote_addr.sin_port);
 }
 
-bool WiFiUDP::connected() {
+bool device_groups_WiFiUDP::connected() {
     return is_connected && sock_fd >= 0;
 }
 
-void WiFiUDP::setTimeout(int timeout_ms) {
+void device_groups_WiFiUDP::setTimeout(int timeout_ms) {
     if (sock_fd >= 0) {
         struct timeval tv;
         tv.tv_sec = timeout_ms / 1000;
@@ -374,7 +373,7 @@ void WiFiUDP::setTimeout(int timeout_ms) {
     }
 }
 
-uint16_t WiFiUDP::localPort() {
+uint16_t device_groups_WiFiUDP::localPort() {
     if (sock_fd < 0) {
         return 0;
     }
@@ -387,7 +386,7 @@ uint16_t WiFiUDP::localPort() {
     return ntohs(addr.sin_port);
 }
 
-const char* WiFiUDP::localIP() {
+const char* device_groups_WiFiUDP::localIP() {
     static char ip_str[16];
     
     // Get the default network interface (usually WiFi STA)
@@ -423,11 +422,11 @@ const char* WiFiUDP::localIP() {
     return "0.0.0.0";
 }
 
-int WiFiUDP::available() {
+int device_groups_WiFiUDP::available() {
     return data_length - read_position;
 }
 
-const char* WiFiUDP::ipToString(uint32_t ip) {
+const char* device_groups_WiFiUDP::ipToString(uint32_t ip) {
     static char ip_str[16];
     struct in_addr addr;
     addr.s_addr = htonl(ip);

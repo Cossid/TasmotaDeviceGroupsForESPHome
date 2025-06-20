@@ -8,7 +8,7 @@
 #if defined(USE_ESP32)
 #include <esp_wifi.h>
 #if defined(USE_ESP_IDF)
-#include "WiFiUdp.h"  // Use local WiFiUdp.h for ESP-IDF
+#include "device_groups_WiFiUdp.h"  // Use local device_groups_WiFiUdp.h for ESP-IDF
 #else
 #include <WiFiUdp.h>  // Use system WiFiUdp.h for Arduino framework
 #endif
@@ -313,7 +313,11 @@ class device_groups : public Component {
 #endif
 
 #if !defined(ESP8266)
+#if defined(USE_ESP_IDF)
+  device_groups_WiFiUDP device_groups_udp;
+#else
   WiFiUDP device_groups_udp;
+#endif
 #endif
   struct device_group *device_groups_;
   uint32_t next_check_time;
