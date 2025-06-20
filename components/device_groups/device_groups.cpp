@@ -1,4 +1,4 @@
-#include "device_groups.h"
+﻿#include "device_groups.h"
 #include "esphome/core/helpers.h"
 #include "esphome/core/log.h"
 #include "esphome/components/network/ip_address.h"
@@ -11,11 +11,7 @@ static const char *const TAG = "dgr";
 
 char *IPAddressToString(const IPAddress &ip_address) {
   static char buffer[16];
-#if defined(USE_ESP_IDF)
-  sprintf(buffer, "%u.%u.%u.%u", ip_address[0], ip_address[1], ip_address[2], ip_address[3]);
-#else
   sprintf_P(buffer, PSTR("%u.%u.%u.%u"), ip_address[0], ip_address[1], ip_address[2], ip_address[3]);
-#endif
   return buffer;
 }
 
@@ -300,11 +296,7 @@ void device_groups::DeviceGroupsInit() {
     }*/
     strcpy(device_group->group_name, this->device_group_name_.c_str());
     device_group->message_header_length =
-#if defined(USE_ESP_IDF)
-        sprintf((char *) device_group->message, "%s%s", kDeviceGroupMessage, device_group->group_name) + 1;
-#else
         sprintf_P((char *) device_group->message, PSTR("%s%s"), kDeviceGroupMessage, device_group->group_name) + 1;
-#endif
     device_group->no_status_share = 0;
     device_group->last_full_status_sequence = -1;
   }
@@ -389,15 +381,6 @@ void device_groups::SendReceiveDeviceGroupMessage(struct device_group *device_gr
 
   // Initialize the log buffer.
   char *log_buffer = (char *) malloc(512);
-#if defined(USE_ESP_IDF)
-  log_length = sprintf(log_buffer, "%s %s message %s %s: seq=%u, flags=%u",
-                       (received ? "Received" : "Sending"), device_group->group_name,
-                       (received ? "from" : "to"),
-                       (device_group_member ? IPAddressToString(device_group_member->ip_address)
-                        : received          ? "local"
-                                            : "network"),
-                       message_sequence, flags);
-#else
   log_length = sprintf(log_buffer, PSTR("%s %s message %s %s: seq=%u, flags=%u"),
                        (received ? PSTR("Received") : PSTR("Sending")), device_group->group_name,
                        (received ? PSTR("from") : PSTR("to")),
@@ -405,7 +388,6 @@ void device_groups::SendReceiveDeviceGroupMessage(struct device_group *device_gr
                         : received          ? PSTR("local")
                                             : PSTR("network")),
                        message_sequence, flags);
-#endif
   log_ptr = log_buffer + log_length;
   log_remaining = 512 - log_length;
 
@@ -436,11 +418,7 @@ void device_groups::SendReceiveDeviceGroupMessage(struct device_group *device_gr
 
     // If we're sending this message directly to a member, it's a resend.
     else {
-#if defined(USE_ESP_IDF)
-      log_length = snprintf(log_ptr, log_remaining, ", last ack=%u", device_group_member->acked_sequence);
-#else
       log_length = snprintf(log_ptr, log_remaining, PSTR(", last ack=%u"), device_group_member->acked_sequence);
-#endif
       log_ptr += log_length;
       log_remaining -= log_length;
       goto write_log;
@@ -458,11 +436,7 @@ void device_groups::SendReceiveDeviceGroupMessage(struct device_group *device_gr
       if (message_sequence <= device_group_member->received_sequence) {
         if (message_sequence == device_group_member->received_sequence ||
             device_group_member->received_sequence - message_sequence > 64536) {
-#if defined(USE_ESP_IDF)
-          log_length = snprintf(log_ptr, log_remaining, " (old)");
-#else
           log_length = snprintf(log_ptr, log_remaining, PSTR(" (old)"));
-#endif
           log_ptr += log_length;
           log_remaining -= log_length;
           goto write_log;
@@ -567,21 +541,12 @@ void device_groups::SendReceiveDeviceGroupMessage(struct device_group *device_gr
       if (message_ptr + value >= message_end_ptr)
         goto badmsg;  // Malformed message
       if (item <= DGR_ITEM_MAX_STRING) {
-#if defined(USE_ESP_IDF)
-        log_length = snprintf(log_ptr, log_remaining, "'%s'", message_ptr);
-#else
         log_length = snprintf(log_ptr, log_remaining, PSTR("'%s'"), message_ptr);
-#endif
       } else {
         switch (item) {
           case DGR_ITEM_LIGHT_CHANNELS:
-#if defined(USE_ESP_IDF)
-            log_length = snprintf(log_ptr, log_remaining, "%u,%u,%u,%u,%u,%u", *message_ptr, *(message_ptr + 1),
-                                  *(message_ptr + 2), *(message_ptr + 3), *(message_ptr + 4), *(message_ptr + 5));
-#else
             log_length = snprintf(log_ptr, log_remaining, PSTR("%u,%u,%u,%u,%u,%u"), *message_ptr, *(message_ptr + 1),
                                   *(message_ptr + 2), *(message_ptr + 3), *(message_ptr + 4), *(message_ptr + 5));
-#endif
             break;
         }
       }
@@ -1276,17 +1241,10 @@ void device_groups::DeviceGroupStatus(uint8_t device_group_index) {
     buffer[0] = buffer[1] = 0;
     for (struct device_group_member *device_group_member = device_group->device_group_members; device_group_member;
          device_group_member = device_group_member->flink) {
-#if defined(USE_ESP_IDF)
-      snprintf(buffer, sizeof(buffer),
-               "%s,{\"IPAddress\":\"%s\",\"ResendCount\":%u,\"LastRcvdSeq\":%u,\"LastAckedSeq\":%u}", buffer,
-               IPAddressToString(device_group_member->ip_address), device_group_member->unicast_count,
-               device_group_member->received_sequence, device_group_member->acked_sequence);
-#else
       snprintf_P(buffer, sizeof(buffer),
                  PSTR("%s,{\"IPAddress\":\"%s\",\"ResendCount\":%u,\"LastRcvdSeq\":%u,\"LastAckedSeq\":%u}"), buffer,
                  IPAddressToString(device_group_member->ip_address), device_group_member->unicast_count,
                  device_group_member->received_sequence, device_group_member->acked_sequence);
-#endif
       member_count++;
     }
     ESP_LOGI(TAG,
@@ -1315,11 +1273,7 @@ void device_groups::DeviceGroupsLoop(void) {
 
   for (multicast_packet packet : received_packets) {
     std::string identifier(std::string(kDeviceGroupMessage) + this->device_group_name_ + '\0');
-#if defined(USE_ESP_IDF)
-    if (!strncmp((char *) packet.payload, identifier.c_str(), identifier.length())) {
-#else
     if (!strncmp_P((char *) packet.payload, identifier.c_str(), identifier.length())) {
-#endif
       ProcessGroupMessageResult status = ProcessDeviceGroupMessage(packet);
       if (status != PROCESS_GROUP_MESSAGE_UNMATCHED) {
         received_packets.erase(std::remove_if(received_packets.begin(), received_packets.end(),
@@ -1330,11 +1284,7 @@ void device_groups::DeviceGroupsLoop(void) {
       bool isRegistered = false;
       for (std::string registered_group_name : registered_group_names) {
         std::string identifier_registered(std::string(kDeviceGroupMessage) + registered_group_name + '\0');
-#if defined(USE_ESP_IDF)
-        if (!strncmp((char *) packet.payload, identifier_registered.c_str(), identifier_registered.length())) {
-#else
         if (!strncmp_P((char *) packet.payload, identifier_registered.c_str(), identifier_registered.length())) {
-#endif
           isRegistered = true;
           break;
         }
@@ -1356,11 +1306,7 @@ void device_groups::DeviceGroupsLoop(void) {
       packet.payload[length] = 0;
       packet.length = length;
       packet.remoteIP = device_groups_udp.remoteIP();
-#if defined(USE_ESP_IDF)
-      if (!strncmp((char *)packet.payload, kDeviceGroupMessage, sizeof(DEVICE_GROUP_MESSAGE) - 1)) {
-#else
       if (!strncmp_P((char *)packet.payload, kDeviceGroupMessage, sizeof(DEVICE_GROUP_MESSAGE) - 1)) {
-#endif
         ProcessDeviceGroupMessage(packet);
       }
     }
@@ -1551,5 +1497,4 @@ void device_groups::InitTasmotaCompatibility() {
 
 }  // namespace device_groups
 }  // namespace esphome
-
 

@@ -9,6 +9,7 @@
 #include <esp_wifi.h>
 #if defined(USE_ESP_IDF)
 #include "device_groups_WiFiUdp.h"  // Use local device_groups_WiFiUdp.h for ESP-IDF
+#include "esp_idf_compatibility.h"
 #else
 #include <WiFiUdp.h>  // Use system WiFiUdp.h for Arduino framework
 #endif
