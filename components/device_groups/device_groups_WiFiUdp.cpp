@@ -240,6 +240,11 @@ size_t device_groups_WiFiUDP::write(uint8_t byte) {
         size_t new_size = buffer_size * 2;
         char* new_buffer = (char*)realloc(buffer, new_size);
         if (!new_buffer) {
+            // Free the original buffer to prevent memory leak
+            free(buffer);
+            buffer = nullptr;
+            buffer_size = 0;
+            data_length = 0;
             return 0;
         }
         buffer = new_buffer;
@@ -264,6 +269,11 @@ size_t device_groups_WiFiUDP::write(const uint8_t* data, size_t size) {
         size_t new_size = buffer_size * 2;
         char* new_buffer = (char*)realloc(buffer, new_size);
         if (!new_buffer) {
+            // Free the original buffer to prevent memory leak
+            free(buffer);
+            buffer = nullptr;
+            buffer_size = 0;
+            data_length = 0;
             return 0;
         }
         buffer = new_buffer;
@@ -289,6 +299,8 @@ int device_groups_WiFiUDP::parsePacket() {
         buffer = (char*)malloc(DEFAULT_BUFFER_SIZE);
         buffer_size = DEFAULT_BUFFER_SIZE;
         if (!buffer) {
+            // Clean up socket state on allocation failure
+            stop();
             return 0;
         }
     }

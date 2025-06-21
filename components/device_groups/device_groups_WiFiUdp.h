@@ -54,6 +54,16 @@ public:
     device_groups_WiFiUDP();
     
     /**
+     * @brief Copy constructor (deleted to prevent copying)
+     */
+    device_groups_WiFiUDP(const device_groups_WiFiUDP&) = delete;
+    
+    /**
+     * @brief Assignment operator (deleted to prevent copying)
+     */
+    device_groups_WiFiUDP& operator=(const device_groups_WiFiUDP&) = delete;
+    
+    /**
      * @brief Destructor
      */
     ~device_groups_WiFiUDP();
