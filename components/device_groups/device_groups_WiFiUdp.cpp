@@ -7,6 +7,7 @@
 #include "esp_wifi.h"
 #include "esp_netif.h"
 #include "esp_log.h"
+#include "esphome/core/log.h"
 
 // Default buffer size for UDP packets
 #define DEFAULT_BUFFER_SIZE 1024
@@ -19,7 +20,7 @@ device_groups_WiFiUDP::device_groups_WiFiUDP() : sock_fd(-1), is_connected(false
                      buffer_size(0), data_length(0), read_position(0) {
     memset(&remote_addr, 0, sizeof(remote_addr));
     remote_addr.sin_family = AF_INET;
-    ESP_LOG_INFO(TAG, "ESP-IDF WiFiUDP implementation initialized");
+    ESP_LOGCONFIG(TAG, "ESP-IDF WiFiUDP implementation initialized");
 }
 
 device_groups_WiFiUDP::~device_groups_WiFiUDP() {
@@ -28,7 +29,7 @@ device_groups_WiFiUDP::~device_groups_WiFiUDP() {
         free(buffer);
         buffer = nullptr;
     }
-    ESP_LOG_INFO(TAG, "ESP-IDF WiFiUDP implementation destroyed");
+    ESP_LOGCONFIG(TAG, "ESP-IDF WiFiUDP implementation destroyed");
 }
 
 bool device_groups_WiFiUDP::isNetworkReady() {
@@ -115,10 +116,10 @@ bool device_groups_WiFiUDP::validateSocket() {
 }
 
 bool device_groups_WiFiUDP::begin(uint16_t port) {
-    ESP_LOG_INFO(TAG, "=== WiFiUDP begin called for port %d ===", port);
+    ESP_LOGCONFIG(TAG, "=== WiFiUDP begin called for port %d ===", port);
     
     if (!isNetworkReady()) {
-        ESP_LOG_INFO(TAG, "Network not ready for UDP begin on port %d", port);
+        ESP_LOGCONFIG(TAG, "Network not ready for UDP begin on port %d", port);
         return false;
     }
     
@@ -133,7 +134,7 @@ bool device_groups_WiFiUDP::begin(uint16_t port) {
     local_addr.sin_port = htons(port);
     
     if (bind(sock_fd, (struct sockaddr*)&local_addr, sizeof(local_addr)) < 0) {
-        ESP_LOG_INFO(TAG, "Failed to bind UDP socket to port %d: %s", port, strerror(errno));
+        ESP_LOGCONFIG(TAG, "Failed to bind UDP socket to port %d: %s", port, strerror(errno));
         close(sock_fd);
         sock_fd = -1;
         return false;
@@ -141,7 +142,7 @@ bool device_groups_WiFiUDP::begin(uint16_t port) {
     
     is_connected = true;
     ESP_LOGD(TAG, "UDP socket bound to port %d", port);
-    ESP_LOG_INFO(TAG, "=== WiFiUDP begin successful for port %d ===", port);
+    ESP_LOGCONFIG(TAG, "=== WiFiUDP begin successful for port %d ===", port);
     return true;
 }
 
