@@ -13,7 +13,7 @@
 #define MAX_RETRIES 3
 #define RETRY_DELAY_MS 10
 
-static const char* TAG = "device_groups_WiFiUDP";
+static const char* TAG = "dgr_WiFiUDP";
 
 device_groups_WiFiUDP::device_groups_WiFiUDP() : sock_fd(-1), is_connected(false), buffer(nullptr), 
                      buffer_size(0), data_length(0), read_position(0) {
