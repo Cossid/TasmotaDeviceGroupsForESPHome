@@ -19,6 +19,7 @@ device_groups_WiFiUDP::device_groups_WiFiUDP() : sock_fd(-1), is_connected(false
                      buffer_size(0), data_length(0), read_position(0) {
     memset(&remote_addr, 0, sizeof(remote_addr));
     remote_addr.sin_family = AF_INET;
+    ESP_LOGI(TAG, "ESP-IDF WiFiUDP implementation initialized");
 }
 
 device_groups_WiFiUDP::~device_groups_WiFiUDP() {
