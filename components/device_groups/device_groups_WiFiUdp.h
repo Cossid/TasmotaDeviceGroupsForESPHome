@@ -41,6 +41,7 @@ class device_groups_WiFiUDP {
 private:
     int sock_fd;
     struct sockaddr_in remote_addr;
+    struct sockaddr_in sender_addr;  // Store sender info for received packets
     bool is_connected;
     char* buffer;
     size_t buffer_size;

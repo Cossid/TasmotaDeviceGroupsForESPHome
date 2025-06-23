@@ -19,7 +19,9 @@ static const char *const TAG = "dgr";
 device_groups_WiFiUDP::device_groups_WiFiUDP() : sock_fd(-1), is_connected(false), buffer(nullptr), 
                      buffer_size(0), data_length(0), read_position(0) {
     memset(&remote_addr, 0, sizeof(remote_addr));
+    memset(&sender_addr, 0, sizeof(sender_addr));
     remote_addr.sin_family = AF_INET;
+    sender_addr.sin_family = AF_INET;
     ESP_LOGCONFIG(TAG, "ESP-IDF WiFiUDP implementation initialized");
 }
 
@@ -272,12 +274,11 @@ bool device_groups_WiFiUDP::beginPacket(uint32_t ip, uint16_t port) {
 }
 
 bool device_groups_WiFiUDP::beginPacket(const IPAddress& ip, uint16_t port) {
-    if (!validateSocket()) {
-        if (!initSocket()) {
-            ESP_LOGE(TAG, "Failed to initialize socket for packet to %u.%u.%u.%u:%d", 
-                     ip[0], ip[1], ip[2], ip[3], port);
-            return false;
-        }
+    // Don't recreate socket unnecessarily - just validate existing one
+    if (sock_fd < 0) {
+        ESP_LOGE(TAG, "No socket available for packet to %u.%u.%u.%u:%d", 
+                 ip[0], ip[1], ip[2], ip[3], port);
+        return false;
     }
     
     remote_addr.sin_addr.s_addr = htonl((ip[0] << 24) | (ip[1] << 16) | (ip[2] << 8) | ip[3]);
@@ -308,8 +309,12 @@ bool device_groups_WiFiUDP::endPacket() {
         
         if (sent >= 0) {
             ESP_LOGD(TAG, "UDP packet sent successfully (%d bytes)", (int)sent);
+            // Clear the send buffer completely
             data_length = 0;
             read_position = 0;
+            if (buffer) {
+                memset(buffer, 0, buffer_size);
+            }
             return true;
         }
         
@@ -403,10 +408,8 @@ int device_groups_WiFiUDP::parsePacket() {
         return 0;
     }
     
-    if (!validateSocket()) {
-        ESP_LOGW(TAG, "Socket validation failed during parsePacket");
-        return 0;
-    }
+    // Don't validate socket here - it can cause issues
+    // Just check if socket exists
     
     // Allocate buffer if not already done
     if (!buffer) {
@@ -414,25 +417,23 @@ int device_groups_WiFiUDP::parsePacket() {
         buffer_size = DEFAULT_BUFFER_SIZE;
         if (!buffer) {
             ESP_LOGE(TAG, "Failed to allocate buffer for parsePacket");
-            // Clean up socket state on allocation failure
-            stop();
             return 0;
         }
     }
     
-    struct sockaddr_in sender_addr;
-    socklen_t sender_len = sizeof(sender_addr);
+    struct sockaddr_in temp_sender_addr;
+    socklen_t sender_len = sizeof(temp_sender_addr);
     
     ssize_t received = recvfrom(sock_fd, buffer, buffer_size - 1, MSG_DONTWAIT,
-                               (struct sockaddr*)&sender_addr, &sender_len);
+                               (struct sockaddr*)&temp_sender_addr, &sender_len);
     
     if (received > 0) {
         data_length = received;
         read_position = 0;
         buffer[data_length] = '\0';  // Null-terminate for string operations
         
-        // Store sender info for remoteIP() and remotePort()
-        remote_addr = sender_addr;
+        // Store sender info separately - DON'T overwrite remote_addr!
+        sender_addr = temp_sender_addr;
         
         ESP_LOGD(TAG, "Received UDP packet: %d bytes from %s:%d", 
                  (int)received, inet_ntoa(sender_addr.sin_addr), ntohs(sender_addr.sin_port));
@@ -481,15 +482,20 @@ void device_groups_WiFiUDP::flush() {
     // For UDP, flush doesn't really apply, but we can clear the receive buffer
     data_length = 0;
     read_position = 0;
+    if (buffer) {
+        memset(buffer, 0, buffer_size);
+    }
 }
 
 IPAddress device_groups_WiFiUDP::remoteIP() {
-    uint32_t ip = ntohl(remote_addr.sin_addr.s_addr);
+    // Use sender_addr for received packets, remote_addr for sent packets
+    uint32_t ip = ntohl(sender_addr.sin_addr.s_addr);
     return IPAddress((ip >> 24) & 0xFF, (ip >> 16) & 0xFF, (ip >> 8) & 0xFF, ip & 0xFF);
 }
 
 uint16_t device_groups_WiFiUDP::remotePort() {
-    return ntohs(remote_addr.sin_port);
+    // Use sender_addr for received packets, remote_addr for sent packets
+    return ntohs(sender_addr.sin_port);
 }
 
 bool device_groups_WiFiUDP::connected() {
