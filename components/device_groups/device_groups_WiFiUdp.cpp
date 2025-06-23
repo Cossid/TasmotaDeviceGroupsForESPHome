@@ -7,6 +7,7 @@
 #include "esp_wifi.h"
 #include "esp_netif.h"
 #include "esp_log.h"
+#include "esp_timer.h"
 #include "esphome/core/log.h"
 
 // Default buffer size for UDP packets
@@ -16,8 +17,11 @@
 
 static const char *const TAG = "dgr";
 
-device_groups_WiFiUDP::device_groups_WiFiUDP() : sock_fd(-1), is_connected(false), buffer(nullptr), 
-                     buffer_size(0), data_length(0), read_position(0) {
+device_groups_WiFiUDP::device_groups_WiFiUDP() : sock_fd(-1), is_connected(false), 
+                     send_buffer(nullptr), recv_buffer(nullptr), 
+                     send_buffer_size(0), recv_buffer_size(0), 
+                     send_data_length(0), recv_data_length(0), recv_read_position(0),
+                     last_packet_hash(0), last_packet_time(0) {
     memset(&remote_addr, 0, sizeof(remote_addr));
     memset(&sender_addr, 0, sizeof(sender_addr));
     remote_addr.sin_family = AF_INET;
@@ -27,9 +31,13 @@ device_groups_WiFiUDP::device_groups_WiFiUDP() : sock_fd(-1), is_connected(false
 
 device_groups_WiFiUDP::~device_groups_WiFiUDP() {
     stop();
-    if (buffer) {
-        free(buffer);
-        buffer = nullptr;
+    if (send_buffer) {
+        free(send_buffer);
+        send_buffer = nullptr;
+    }
+    if (recv_buffer) {
+        free(recv_buffer);
+        recv_buffer = nullptr;
     }
     ESP_LOGCONFIG(TAG, "ESP-IDF WiFiUDP implementation destroyed");
 }
@@ -105,6 +113,18 @@ bool device_groups_WiFiUDP::validateSocket() {
     if (sock_fd < 0) {
         return false;
     }
+    
+    // Only check socket validity if we haven't checked recently
+    // This reduces overhead and prevents excessive socket recreation
+    static uint32_t last_validation_time = 0;
+    uint32_t current_time = esp_timer_get_time() / 1000; // Convert to milliseconds
+    
+    // Only validate every 5 seconds to reduce overhead
+    if (current_time - last_validation_time < 5000) {
+        return true;
+    }
+    
+    last_validation_time = current_time;
     
     // Check if socket is still valid
     int error = 0;
@@ -235,13 +255,19 @@ void device_groups_WiFiUDP::stop() {
     }
     is_connected = false;
     
-    if (buffer) {
-        free(buffer);
-        buffer = nullptr;
-        buffer_size = 0;
+    if (send_buffer) {
+        free(send_buffer);
+        send_buffer = nullptr;
+        send_buffer_size = 0;
     }
-    data_length = 0;
-    read_position = 0;
+    if (recv_buffer) {
+        free(recv_buffer);
+        recv_buffer = nullptr;
+        recv_buffer_size = 0;
+    }
+    send_data_length = 0;
+    recv_data_length = 0;
+    recv_read_position = 0;
     ESP_LOGD(TAG, "UDP socket stopped");
 }
 
@@ -294,33 +320,34 @@ bool device_groups_WiFiUDP::endPacket() {
         return false;
     }
     
-    if (data_length == 0) {
+    if (send_data_length == 0) {
         ESP_LOGW(TAG, "Attempting to send empty packet");
         return false;
     }
     
     ESP_LOGD(TAG, "Attempting to send UDP packet: %d bytes to %s:%d", 
-             data_length, inet_ntoa(remote_addr.sin_addr), ntohs(remote_addr.sin_port));
+             send_data_length, inet_ntoa(remote_addr.sin_addr), ntohs(remote_addr.sin_port));
     
     int retries = MAX_RETRIES;
     while (retries-- > 0) {
-        ssize_t sent = sendto(sock_fd, buffer, data_length, 0,
+        ssize_t sent = sendto(sock_fd, send_buffer, send_data_length, 0,
                               (struct sockaddr*)&remote_addr, sizeof(remote_addr));
         
         if (sent >= 0) {
-            ESP_LOGD(TAG, "UDP packet sent successfully (%d bytes)", (int)sent);
+            // Reduced logging verbosity to prevent performance issues during packet storms
+            // ESP_LOGD(TAG, "UDP packet sent successfully (%d bytes)", (int)sent);
             // Clear the send buffer completely
-            data_length = 0;
-            read_position = 0;
-            if (buffer) {
-                memset(buffer, 0, buffer_size);
+            send_data_length = 0;
+            if (send_buffer) {
+                memset(send_buffer, 0, send_buffer_size);
             }
             return true;
         }
         
         if (errno == EAGAIN || errno == EWOULDBLOCK) {
             // Non-blocking socket would block, try again
-            ESP_LOGD(TAG, "Socket would block, retrying... (%d retries left)", retries);
+            // Reduced logging verbosity
+            // ESP_LOGD(TAG, "Socket would block, retrying... (%d retries left)", retries);
             vTaskDelay(pdMS_TO_TICKS(RETRY_DELAY_MS));
             continue;
         }
@@ -334,68 +361,61 @@ bool device_groups_WiFiUDP::endPacket() {
 }
 
 size_t device_groups_WiFiUDP::write(uint8_t byte) {
-    if (!buffer) {
-        buffer = (char*)malloc(DEFAULT_BUFFER_SIZE);
-        buffer_size = DEFAULT_BUFFER_SIZE;
-        if (!buffer) {
-            ESP_LOGE(TAG, "Failed to allocate buffer for UDP write");
+    if (!send_buffer) {
+        send_buffer = (char*)malloc(DEFAULT_BUFFER_SIZE);
+        send_buffer_size = DEFAULT_BUFFER_SIZE;
+        if (!send_buffer) {
+            ESP_LOGE(TAG, "Failed to allocate send buffer for UDP write");
             return 0;
         }
+        memset(send_buffer, 0, send_buffer_size);
     }
     
-    if (data_length >= buffer_size) {
+    if (send_data_length >= send_buffer_size) {
         // Resize buffer if needed
-        size_t new_size = buffer_size * 2;
-        char* new_buffer = (char*)realloc(buffer, new_size);
+        size_t new_size = send_buffer_size * 2;
+        char* new_buffer = (char*)realloc(send_buffer, new_size);
         if (!new_buffer) {
-            ESP_LOGE(TAG, "Failed to resize buffer from %d to %d bytes", buffer_size, new_size);
-            // Free the original buffer to prevent memory leak
-            free(buffer);
-            buffer = nullptr;
-            buffer_size = 0;
-            data_length = 0;
+            ESP_LOGE(TAG, "Failed to resize send buffer from %d to %d bytes", send_buffer_size, new_size);
             return 0;
         }
-        buffer = new_buffer;
-        buffer_size = new_size;
-        ESP_LOGD(TAG, "Buffer resized to %d bytes", new_size);
+        send_buffer = new_buffer;
+        send_buffer_size = new_size;
+        ESP_LOGD(TAG, "Send buffer resized to %d bytes", new_size);
     }
     
-    buffer[data_length++] = byte;
+    send_buffer[send_data_length++] = byte;
     return 1;
 }
 
 size_t device_groups_WiFiUDP::write(const uint8_t* data, size_t size) {
-    if (!buffer) {
-        buffer = (char*)malloc(DEFAULT_BUFFER_SIZE);
-        buffer_size = DEFAULT_BUFFER_SIZE;
-        if (!buffer) {
-            ESP_LOGE(TAG, "Failed to allocate buffer for UDP write");
+    if (!send_buffer) {
+        send_buffer = (char*)malloc(DEFAULT_BUFFER_SIZE);
+        send_buffer_size = DEFAULT_BUFFER_SIZE;
+        if (!send_buffer) {
+            ESP_LOGE(TAG, "Failed to allocate send buffer for UDP write");
             return 0;
         }
+        memset(send_buffer, 0, send_buffer_size);
     }
     
     // Ensure buffer is large enough
-    while (data_length + size > buffer_size) {
-        size_t new_size = buffer_size * 2;
-        char* new_buffer = (char*)realloc(buffer, new_size);
+    while (send_data_length + size > send_buffer_size) {
+        size_t new_size = send_buffer_size * 2;
+        char* new_buffer = (char*)realloc(send_buffer, new_size);
         if (!new_buffer) {
-            ESP_LOGE(TAG, "Failed to resize buffer from %d to %d bytes", buffer_size, new_size);
-            // Free the original buffer to prevent memory leak
-            free(buffer);
-            buffer = nullptr;
-            buffer_size = 0;
-            data_length = 0;
+            ESP_LOGE(TAG, "Failed to resize send buffer from %d to %d bytes", send_buffer_size, new_size);
             return 0;
         }
-        buffer = new_buffer;
-        buffer_size = new_size;
-        ESP_LOGD(TAG, "Buffer resized to %d bytes", new_size);
+        send_buffer = new_buffer;
+        send_buffer_size = new_size;
+        ESP_LOGD(TAG, "Send buffer resized to %d bytes", new_size);
     }
     
-    memcpy(buffer + data_length, data, size);
-    data_length += size;
-    ESP_LOGD(TAG, "Wrote %d bytes to packet buffer (total: %d)", size, data_length);
+    memcpy(send_buffer + send_data_length, data, size);
+    send_data_length += size;
+    // Reduced logging verbosity to prevent performance issues during packet storms
+    // ESP_LOGD(TAG, "Wrote %d bytes to send buffer (total: %d)", size, send_data_length);
     return size;
 }
 
@@ -408,37 +428,63 @@ int device_groups_WiFiUDP::parsePacket() {
         return 0;
     }
     
-    // Don't validate socket here - it can cause issues
-    // Just check if socket exists
-    
-    // Allocate buffer if not already done
-    if (!buffer) {
-        buffer = (char*)malloc(DEFAULT_BUFFER_SIZE);
-        buffer_size = DEFAULT_BUFFER_SIZE;
-        if (!buffer) {
-            ESP_LOGE(TAG, "Failed to allocate buffer for parsePacket");
+    // Allocate receive buffer if not already done
+    if (!recv_buffer) {
+        recv_buffer = (char*)malloc(DEFAULT_BUFFER_SIZE);
+        recv_buffer_size = DEFAULT_BUFFER_SIZE;
+        if (!recv_buffer) {
+            ESP_LOGE(TAG, "Failed to allocate receive buffer for parsePacket");
             return 0;
         }
+        memset(recv_buffer, 0, recv_buffer_size);
     }
+    
+    // Clear any previous packet data
+    recv_data_length = 0;
+    recv_read_position = 0;
+    memset(recv_buffer, 0, recv_buffer_size);
     
     struct sockaddr_in temp_sender_addr;
     socklen_t sender_len = sizeof(temp_sender_addr);
     
-    ssize_t received = recvfrom(sock_fd, buffer, buffer_size - 1, MSG_DONTWAIT,
+    ssize_t received = recvfrom(sock_fd, recv_buffer, recv_buffer_size - 1, MSG_DONTWAIT,
                                (struct sockaddr*)&temp_sender_addr, &sender_len);
     
     if (received > 0) {
-        data_length = received;
-        read_position = 0;
-        buffer[data_length] = '\0';  // Null-terminate for string operations
+        // Simple packet deduplication to prevent storms
+        uint32_t current_time = esp_timer_get_time() / 1000; // Convert to milliseconds
+        uint32_t packet_hash = 0;
+        
+        // Simple hash of packet content and sender
+        for (int i = 0; i < received && i < 16; i++) { // Hash first 16 bytes
+            packet_hash = ((packet_hash << 5) + packet_hash) + recv_buffer[i];
+        }
+        packet_hash ^= temp_sender_addr.sin_addr.s_addr;
+        packet_hash ^= temp_sender_addr.sin_port;
+        
+        // Check if this is a duplicate packet within the deduplication window
+        if (packet_hash == last_packet_hash && 
+            (current_time - last_packet_time) < DEDUP_WINDOW_MS) {
+            ESP_LOGD(TAG, "Dropping duplicate packet (hash: 0x%08x, time: %d ms)", 
+                     packet_hash, current_time - last_packet_time);
+            return 0;
+        }
+        
+        // Update deduplication tracking
+        last_packet_hash = packet_hash;
+        last_packet_time = current_time;
+        
+        recv_data_length = received;
+        recv_read_position = 0;
+        recv_buffer[recv_data_length] = '\0';  // Null-terminate for string operations
         
         // Store sender info separately - DON'T overwrite remote_addr!
         sender_addr = temp_sender_addr;
         
-        ESP_LOGD(TAG, "Received UDP packet: %d bytes from %s:%d", 
-                 (int)received, inet_ntoa(sender_addr.sin_addr), ntohs(sender_addr.sin_port));
+        ESP_LOGD(TAG, "Received UDP packet: %d bytes from %s:%d (hash: 0x%08x)", 
+                 (int)received, inet_ntoa(sender_addr.sin_addr), ntohs(sender_addr.sin_port), packet_hash);
         
-        return data_length;
+        return recv_data_length;
     } else if (received < 0 && errno != EAGAIN && errno != EWOULDBLOCK) {
         ESP_LOGE(TAG, "Error receiving UDP packet: %s", strerror(errno));
     }
@@ -447,22 +493,22 @@ int device_groups_WiFiUDP::parsePacket() {
 }
 
 int device_groups_WiFiUDP::read() {
-    if (read_position >= data_length) {
+    if (recv_read_position >= recv_data_length) {
         return -1;
     }
-    return (int)(unsigned char)buffer[read_position++];
+    return (int)(unsigned char)recv_buffer[recv_read_position++];
 }
 
 int device_groups_WiFiUDP::read(uint8_t* data, size_t size) {
-    if (read_position >= data_length) {
+    if (recv_read_position >= recv_data_length) {
         return -1;
     }
     
-    size_t available = data_length - read_position;
+    size_t available = recv_data_length - recv_read_position;
     size_t to_read = (size < available) ? size : available;
     
-    memcpy(data, buffer + read_position, to_read);
-    read_position += to_read;
+    memcpy(data, recv_buffer + recv_read_position, to_read);
+    recv_read_position += to_read;
     
     return to_read;
 }
@@ -472,18 +518,18 @@ int device_groups_WiFiUDP::read(char* data, size_t size) {
 }
 
 int device_groups_WiFiUDP::peek() {
-    if (read_position >= data_length) {
+    if (recv_read_position >= recv_data_length) {
         return -1;
     }
-    return (int)(unsigned char)buffer[read_position];
+    return (int)(unsigned char)recv_buffer[recv_read_position];
 }
 
 void device_groups_WiFiUDP::flush() {
-    // For UDP, flush doesn't really apply, but we can clear the receive buffer
-    data_length = 0;
-    read_position = 0;
-    if (buffer) {
-        memset(buffer, 0, buffer_size);
+    // Clear the receive buffer
+    recv_data_length = 0;
+    recv_read_position = 0;
+    if (recv_buffer) {
+        memset(recv_buffer, 0, recv_buffer_size);
     }
 }
 
@@ -565,7 +611,7 @@ const char* device_groups_WiFiUDP::localIP() {
 }
 
 int device_groups_WiFiUDP::available() {
-    return data_length - read_position;
+    return recv_data_length - recv_read_position;
 }
 
 const char* device_groups_WiFiUDP::ipToString(uint32_t ip) {

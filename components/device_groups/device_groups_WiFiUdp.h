@@ -43,10 +43,18 @@ private:
     struct sockaddr_in remote_addr;
     struct sockaddr_in sender_addr;  // Store sender info for received packets
     bool is_connected;
-    char* buffer;
-    size_t buffer_size;
-    size_t data_length;
-    size_t read_position;
+    char* send_buffer;      // Separate buffer for sending packets
+    char* recv_buffer;      // Separate buffer for receiving packets
+    size_t send_buffer_size;
+    size_t recv_buffer_size;
+    size_t send_data_length;
+    size_t recv_data_length;
+    size_t recv_read_position;
+    
+    // Packet deduplication to prevent storms
+    uint32_t last_packet_hash;
+    uint32_t last_packet_time;
+    static const uint32_t DEDUP_WINDOW_MS = 100; // 100ms window for deduplication
 
 public:
     /**
