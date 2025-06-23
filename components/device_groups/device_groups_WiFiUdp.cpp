@@ -163,7 +163,7 @@ bool device_groups_WiFiUDP::begin(uint16_t port) {
     }
     
     is_connected = true;
-    ESP_LOGD(TAG, "UDP socket bound to port %d", port);
+    ESP_LOGVV(TAG, "UDP socket bound to port %d", port);
     ESP_LOGCONFIG(TAG, "=== WiFiUDP begin successful for port %d ===", port);
     return true;
 }
@@ -204,7 +204,7 @@ bool device_groups_WiFiUDP::beginMulticast(uint16_t port, const char* multicast_
     }
     
     is_connected = true;
-    ESP_LOGD(TAG, "Joined multicast group %s on port %d", multicast_ip, port);
+    ESP_LOGVV(TAG, "Joined multicast group %s on port %d", multicast_ip, port);
     return true;
 }
 
@@ -244,7 +244,7 @@ bool device_groups_WiFiUDP::beginMulticast(const IPAddress& multicast_ip, uint16
     }
     
     is_connected = true;
-    ESP_LOGD(TAG, "Joined multicast group on port %d", port);
+    ESP_LOGVV(TAG, "Joined multicast group on port %d", port);
     return true;
 }
 
@@ -268,7 +268,7 @@ void device_groups_WiFiUDP::stop() {
     send_data_length = 0;
     recv_data_length = 0;
     recv_read_position = 0;
-    ESP_LOGD(TAG, "UDP socket stopped");
+    ESP_LOGVV(TAG, "UDP socket stopped");
 }
 
 bool device_groups_WiFiUDP::beginPacket(const char* ip, uint16_t port) {
@@ -310,7 +310,7 @@ bool device_groups_WiFiUDP::beginPacket(const IPAddress& ip, uint16_t port) {
     remote_addr.sin_addr.s_addr = htonl((ip[0] << 24) | (ip[1] << 16) | (ip[2] << 8) | ip[3]);
     remote_addr.sin_port = htons(port);
     
-    ESP_LOGD(TAG, "Prepared packet for %u.%u.%u.%u:%d", ip[0], ip[1], ip[2], ip[3], port);
+    ESP_LOGVV(TAG, "Prepared packet for %u.%u.%u.%u:%d", ip[0], ip[1], ip[2], ip[3], port);
     return true;
 }
 
@@ -325,7 +325,7 @@ bool device_groups_WiFiUDP::endPacket() {
         return false;
     }
     
-    ESP_LOGD(TAG, "Attempting to send UDP packet: %d bytes to %s:%d", 
+    ESP_LOGVV(TAG, "Attempting to send UDP packet: %d bytes to %s:%d", 
              send_data_length, inet_ntoa(remote_addr.sin_addr), ntohs(remote_addr.sin_port));
     
     int retries = MAX_RETRIES;
@@ -381,7 +381,7 @@ size_t device_groups_WiFiUDP::write(uint8_t byte) {
         }
         send_buffer = new_buffer;
         send_buffer_size = new_size;
-        ESP_LOGD(TAG, "Send buffer resized to %d bytes", new_size);
+        ESP_LOGVV(TAG, "Send buffer resized to %d bytes", new_size);
     }
     
     send_buffer[send_data_length++] = byte;
@@ -409,7 +409,7 @@ size_t device_groups_WiFiUDP::write(const uint8_t* data, size_t size) {
         }
         send_buffer = new_buffer;
         send_buffer_size = new_size;
-        ESP_LOGD(TAG, "Send buffer resized to %d bytes", new_size);
+        ESP_LOGVV(TAG, "Send buffer resized to %d bytes", new_size);
     }
     
     memcpy(send_buffer + send_data_length, data, size);
@@ -465,7 +465,7 @@ int device_groups_WiFiUDP::parsePacket() {
         // Check if this is a duplicate packet within the deduplication window
         if (packet_hash == last_packet_hash && 
             (current_time - last_packet_time) < DEDUP_WINDOW_MS) {
-            ESP_LOGD(TAG, "Dropping duplicate packet (hash: 0x%08x, time: %d ms)", 
+            ESP_LOGVV(TAG, "Dropping duplicate packet (hash: 0x%08x, time: %d ms)", 
                      packet_hash, current_time - last_packet_time);
             return 0;
         }
@@ -481,7 +481,7 @@ int device_groups_WiFiUDP::parsePacket() {
         // Store sender info separately - DON'T overwrite remote_addr!
         sender_addr = temp_sender_addr;
         
-        ESP_LOGD(TAG, "Received UDP packet: %d bytes from %s:%d (hash: 0x%08x)", 
+        ESP_LOGVV(TAG, "Received UDP packet: %d bytes from %s:%d (hash: 0x%08x)", 
                  (int)received, inet_ntoa(sender_addr.sin_addr), ntohs(sender_addr.sin_port), packet_hash);
         
         return recv_data_length;
