@@ -268,7 +268,8 @@ bool device_groups_WiFiUDP::beginPacket(uint32_t ip, uint16_t port) {
 bool device_groups_WiFiUDP::beginPacket(const IPAddress& ip, uint16_t port) {
     if (!validateSocket()) {
         if (!initSocket()) {
-            ESP_LOGE(TAG, "Failed to initialize socket for packet");
+            ESP_LOGE(TAG, "Failed to initialize socket for packet to %u.%u.%u.%u:%d", 
+                     ip[0], ip[1], ip[2], ip[3], port);
             return false;
         }
     }
@@ -276,6 +277,7 @@ bool device_groups_WiFiUDP::beginPacket(const IPAddress& ip, uint16_t port) {
     remote_addr.sin_addr.s_addr = htonl((ip[0] << 24) | (ip[1] << 16) | (ip[2] << 8) | ip[3]);
     remote_addr.sin_port = htons(port);
     
+    ESP_LOGD(TAG, "Prepared packet for %u.%u.%u.%u:%d", ip[0], ip[1], ip[2], ip[3], port);
     return true;
 }
 
@@ -284,6 +286,14 @@ bool device_groups_WiFiUDP::endPacket() {
         ESP_LOGE(TAG, "No valid socket for packet transmission");
         return false;
     }
+    
+    if (data_length == 0) {
+        ESP_LOGW(TAG, "Attempting to send empty packet");
+        return false;
+    }
+    
+    ESP_LOGD(TAG, "Attempting to send UDP packet: %d bytes to %s:%d", 
+             data_length, inet_ntoa(remote_addr.sin_addr), ntohs(remote_addr.sin_port));
     
     int retries = MAX_RETRIES;
     while (retries-- > 0) {
@@ -308,6 +318,7 @@ bool device_groups_WiFiUDP::endPacket() {
         break;
     }
     
+    ESP_LOGE(TAG, "All retry attempts failed for UDP packet transmission");
     return false;
 }
 
@@ -373,6 +384,7 @@ size_t device_groups_WiFiUDP::write(const uint8_t* data, size_t size) {
     
     memcpy(buffer + data_length, data, size);
     data_length += size;
+    ESP_LOGD(TAG, "Wrote %d bytes to packet buffer (total: %d)", size, data_length);
     return size;
 }
 
