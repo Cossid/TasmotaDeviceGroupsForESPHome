@@ -19,7 +19,7 @@ device_groups_WiFiUDP::device_groups_WiFiUDP() : sock_fd(-1), is_connected(false
                      buffer_size(0), data_length(0), read_position(0) {
     memset(&remote_addr, 0, sizeof(remote_addr));
     remote_addr.sin_family = AF_INET;
-    ESP_LOGI(TAG, "ESP-IDF WiFiUDP implementation initialized");
+    ESP_LOGE(TAG, "ESP-IDF WiFiUDP implementation initialized");
 }
 
 device_groups_WiFiUDP::~device_groups_WiFiUDP() {
@@ -28,6 +28,7 @@ device_groups_WiFiUDP::~device_groups_WiFiUDP() {
         free(buffer);
         buffer = nullptr;
     }
+    ESP_LOGE(TAG, "ESP-IDF WiFiUDP implementation destroyed");
 }
 
 bool device_groups_WiFiUDP::isNetworkReady() {
@@ -114,6 +115,8 @@ bool device_groups_WiFiUDP::validateSocket() {
 }
 
 bool device_groups_WiFiUDP::begin(uint16_t port) {
+    ESP_LOGE(TAG, "=== WiFiUDP begin called for port %d ===", port);
+    
     if (!isNetworkReady()) {
         ESP_LOGE(TAG, "Network not ready for UDP begin on port %d", port);
         return false;
@@ -138,6 +141,7 @@ bool device_groups_WiFiUDP::begin(uint16_t port) {
     
     is_connected = true;
     ESP_LOGD(TAG, "UDP socket bound to port %d", port);
+    ESP_LOGE(TAG, "=== WiFiUDP begin successful for port %d ===", port);
     return true;
 }
 
