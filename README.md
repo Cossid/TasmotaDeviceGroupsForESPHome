@@ -112,7 +112,7 @@ Button is just an example, but you could hook into any of the `on_` events for `
 
 ### ESP-IDF Support
 
-This component now includes full ESP-IDF support through a custom WiFiUDP implementation (`WiFiUdp.h` and `WiFiUdp.cpp`). The implementation provides ESPHome-compatible UDP functionality using ESP-IDF's native socket API, allowing the component to work seamlessly with ESP-IDF without requiring Arduino framework dependencies.
+This component now includes full ESP-IDF support through a custom WiFiUDP implementation (`device_groups_WiFiUdp.h` and `device_groups_WiFiUdp.cpp`). The implementation provides ESPHome-compatible UDP functionality using ESP-IDF's native socket API, allowing the component to work seamlessly with ESP-IDF without requiring Arduino framework dependencies.
 
 **Features of the ESP-IDF WiFiUDP implementation:**
 - Full ESPHome WiFiUDP API compatibility
@@ -124,6 +124,13 @@ This component now includes full ESP-IDF support through a custom WiFiUDP implem
 - Fixed `ifaddrs.h` dependency issue by replacing `getifaddrs()` with ESP-IDF's `esp_netif_get_ip_info()` API
 - Added proper ESP-IDF includes (`esp_wifi.h`, `esp_netif.h`) with conditional compilation
 - Updated `localIP()` method to use ESP-IDF network interface API instead of POSIX ifaddrs
+
+**Troubleshooting ESP-IDF Issues:**
+If you experience intermittent behavior with ESP-IDF builds, the enhanced logging will help identify the root cause:
+- Check for "Network not ready" messages indicating WiFi connectivity issues
+- Look for "Socket error detected" messages indicating socket state problems
+- Monitor "Socket would block" messages during high network load
+- Verify buffer allocation success in memory-constrained environments
 
 ### Arduino Framework Support
 

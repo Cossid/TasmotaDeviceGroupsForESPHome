@@ -69,6 +69,18 @@ public:
     ~device_groups_WiFiUDP();
     
     /**
+     * @brief Check if network is ready for UDP operations
+     * @return true if network is ready, false otherwise
+     */
+    bool isNetworkReady();
+    
+    /**
+     * @brief Validate socket state and reinitialize if needed
+     * @return true if socket is valid, false otherwise
+     */
+    bool validateSocket();
+    
+    /**
      * @brief Begin UDP communication on specified port
      * @param port The port number to bind to
      * @return true if successful, false otherwise
@@ -207,20 +219,20 @@ public:
     uint16_t remotePort();
     
     /**
-     * @brief Check if the UDP connection is active
+     * @brief Check if UDP connection is active
      * @return true if connected, false otherwise
      */
     bool connected();
     
     /**
-     * @brief Set timeout for socket operations
+     * @brief Set socket timeout
      * @param timeout_ms Timeout in milliseconds
      */
     void setTimeout(int timeout_ms);
     
     /**
      * @brief Get the local port number
-     * @return Local port number
+     * @return Local port number, 0 if not bound
      */
     uint16_t localPort();
     
@@ -229,16 +241,15 @@ public:
      * @return Local IP address as string
      */
     const char* localIP();
-
-private:
+    
     /**
-     * @brief Initialize the UDP socket
+     * @brief Initialize socket with proper options
      * @return true if successful, false otherwise
      */
     bool initSocket();
     
     /**
-     * @brief Set socket options
+     * @brief Set socket options for non-blocking operation
      * @return true if successful, false otherwise
      */
     bool setSocketOptions();
