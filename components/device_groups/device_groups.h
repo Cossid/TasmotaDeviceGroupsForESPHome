@@ -7,7 +7,7 @@
 
 #if defined(USE_ESP32)
 #include <esp_wifi.h>
-#if defined(USE_ESP_IDF)
+#if defined(USE_ESP_IDF) || defined(ESP_IDF_VERSION) || defined(CONFIG_IDF_TARGET)
 #include "device_groups_WiFiUdp.h"  // Use local device_groups_WiFiUdp.h for ESP-IDF
 #include "esp_idf_compatibility.h"
 #else
@@ -314,7 +314,7 @@ class device_groups : public Component {
 #endif
 
 
-#if defined(USE_ESP_IDF)
+#if defined(USE_ESP_IDF) || defined(ESP_IDF_VERSION) || defined(CONFIG_IDF_TARGET)
   device_groups_WiFiUDP device_groups_udp;
 #elif !defined(ESP8266)
   WiFiUDP device_groups_udp;

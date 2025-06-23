@@ -1,4 +1,4 @@
-#if defined(USE_ESP_IDF)
+#if defined(USE_ESP_IDF) || defined(ESP_IDF_VERSION) || defined(CONFIG_IDF_TARGET)
 
 #include "device_groups_WiFiUdp.h"
 #include <fcntl.h>
@@ -20,6 +20,7 @@ device_groups_WiFiUDP::device_groups_WiFiUDP() : sock_fd(-1), is_connected(false
     memset(&remote_addr, 0, sizeof(remote_addr));
     remote_addr.sin_family = AF_INET;
     ESP_LOGE(TAG, "ESP-IDF WiFiUDP implementation initialized");
+    printf("*** WiFiUDP CONSTRUCTOR CALLED ***\n");
 }
 
 device_groups_WiFiUDP::~device_groups_WiFiUDP() {
@@ -116,6 +117,7 @@ bool device_groups_WiFiUDP::validateSocket() {
 
 bool device_groups_WiFiUDP::begin(uint16_t port) {
     ESP_LOGE(TAG, "=== WiFiUDP begin called for port %d ===", port);
+    printf("*** WiFiUDP BEGIN CALLED for port %d ***\n", port);
     
     if (!isNetworkReady()) {
         ESP_LOGE(TAG, "Network not ready for UDP begin on port %d", port);
@@ -569,4 +571,4 @@ const char* device_groups_WiFiUDP::ipToString(uint32_t ip) {
     return ip_str;
 }
 
-#endif  // USE_ESP_IDF 
+#endif  // USE_ESP_IDF || ESP_IDF_VERSION || CONFIG_IDF_TARGET 
