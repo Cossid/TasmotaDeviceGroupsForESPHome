@@ -1,4 +1,4 @@
-#include "device_groups.h"
+﻿#include "device_groups.h"
 #include "esphome/core/helpers.h"
 #include "esphome/core/log.h"
 #include "esphome/components/network/ip_address.h"
@@ -1497,3 +1497,4 @@ void device_groups::InitTasmotaCompatibility() {
 
 }  // namespace device_groups
 }  // namespace esphome
+

@@ -7,7 +7,12 @@
 
 #if defined(USE_ESP32)
 #include <esp_wifi.h>
-#include <WiFiUdp.h>
+#if defined(USE_ESP_IDF) || defined(ESP_IDF_VERSION) || defined(CONFIG_IDF_TARGET)
+#include "device_groups_WiFiUdp.h"  // Use local device_groups_WiFiUdp.h for ESP-IDF
+#include "esp_idf_compatibility.h"
+#else
+#include <WiFiUdp.h>  // Use system WiFiUdp.h for Arduino framework
+#endif
 #elif USE_ESP8266
 #include <ESP8266WiFi.h>
 #include <WiFiUdp.h>
@@ -308,9 +313,13 @@ class device_groups : public Component {
   std::vector<light::LightState *> lights_{};
 #endif
 
-#if !defined(ESP8266)
+
+#if defined(USE_ESP_IDF) || defined(ESP_IDF_VERSION) || defined(CONFIG_IDF_TARGET)
+  device_groups_WiFiUDP device_groups_udp;
+#elif !defined(ESP8266)
   WiFiUDP device_groups_udp;
 #endif
+
   struct device_group *device_groups_;
   uint32_t next_check_time;
   bool device_groups_initialized = false;

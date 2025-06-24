@@ -108,10 +108,37 @@ device_groups:
 
 Button is just an example, but you could hook into any of the `on_` events for `binary_sensor`, `button`, `switch`, etc.
 
+## Framework Support
+
+### ESP-IDF Support
+
+This component now includes full ESP-IDF support through a custom WiFiUDP implementation (`device_groups_WiFiUdp.h` and `device_groups_WiFiUdp.cpp`). The implementation provides ESPHome-compatible UDP functionality using ESP-IDF's native socket API, allowing the component to work seamlessly with ESP-IDF without requiring Arduino framework dependencies.
+
+**Features of the ESP-IDF WiFiUDP implementation:**
+- Full ESPHome WiFiUDP API compatibility
+- Multicast support for device group communication
+- Native ESP-IDF socket operations
+- Automatic conditional compilation (uses local WiFiUdp.h when `USE_ESP_IDF` is defined)
+
+**ESP-IDF Compilation Fix:**
+- Fixed `ifaddrs.h` dependency issue by replacing `getifaddrs()` with ESP-IDF's `esp_netif_get_ip_info()` API
+- Added proper ESP-IDF includes (`esp_wifi.h`, `esp_netif.h`) with conditional compilation
+- Updated `localIP()` method to use ESP-IDF network interface API instead of POSIX ifaddrs
+
+**Troubleshooting ESP-IDF Issues:**
+If you experience intermittent behavior with ESP-IDF builds, the enhanced logging will help identify the root cause:
+- Check for "Network not ready" messages indicating WiFi connectivity issues
+- Look for "Socket error detected" messages indicating socket state problems
+- Monitor "Socket would block" messages during high network load
+- Verify buffer allocation success in memory-constrained environments
+
+### Arduino Framework Support
+
+The component continues to support Arduino-based frameworks (ESP32 Arduino, ESP8266 Arduino) using the standard WiFiUDP libraries.
+
 ### Known Issues
 
 * Multiple relays in the same group cannot currently be individually addressed, so an action against the group will apply to all entities in the group on ESPHome.  [Issue #2](https://github.com/Cossid/TasmotaDeviceGroupsForESPHome/issues/2) will track the potential resolution for this.  As a workaround, you can enable SetOption88 on Tasmota and assign individual groups.  While Tasmota by default is limited to 4 groups, ESPHome has no limit.
-* Does not currently work with ESP-IDF framework, as it lacks an arduino-compatible upd multicast library.  Support may come eventually, but for the time being, arduino-based frameworks are required.
 * ESPHome handles brightness between RGB and White channels differently, and both modes cannot be supported at the same time.  As a result, RGB brightness cannot currently be supported for RGBW bulbs without color_interlock.
 
 ### Misc
