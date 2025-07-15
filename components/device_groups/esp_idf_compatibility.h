@@ -17,4 +17,4 @@
 
 #endif // USE_ESP_IDF
 
-#endif // ESP_IDF_COMPATIBILITY_H 
+#endif // ESP_IDF_COMPATIBILITY_H

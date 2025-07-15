@@ -1497,4 +1497,3 @@ void device_groups::InitTasmotaCompatibility() {
 
 }  // namespace device_groups
 }  // namespace esphome
-

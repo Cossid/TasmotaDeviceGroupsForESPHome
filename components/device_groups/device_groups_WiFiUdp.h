@@ -1,4 +1,4 @@
-#if defined(USE_ESP_IDF) || defined(ESP_IDF_VERSION) || defined(CONFIG_IDF_TARGET)
+#if defined(USE_ESP_IDF)
 
 #pragma once
 
@@ -275,4 +275,4 @@ public:
 }
 #endif 
 
-#endif  // USE_ESP_IDF || ESP_IDF_VERSION || CONFIG_IDF_TARGET 
+#endif  // USE_ESP_IDF
