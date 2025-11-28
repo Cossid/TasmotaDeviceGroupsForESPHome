@@ -89,8 +89,10 @@ enum DevGroupItem {
   // Add new 8-bit items before this line
   DGR_ITEM_LAST_8BIT,
   DGR_ITEM_MAX_8BIT = 63,
-  // DGR_ITEM_ANALOG1, DGR_ITEM_ANALOG2, DGR_ITEM_ANALOG3, DGR_ITEM_ANALOG4, DGR_ITEM_ANALOG5,
-  //  Add new 16-bit items before this line
+  
+  // 16-bit items (aggiungi qui eventuali altri)
+  DGR_ITEM_ANALOG1,
+  
   DGR_ITEM_LAST_16BIT,
   DGR_ITEM_MAX_16BIT = 127,
   DGR_ITEM_POWER,
