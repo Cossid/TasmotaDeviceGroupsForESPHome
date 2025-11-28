@@ -152,7 +152,7 @@ void device_groups::get_light_values(light::LightState *obj, bool &power_state, 
   bool has_rgb_values = red > 0 || green > 0 || blue > 0;
   bool has_white_values = warm_white > 0 || cold_white > 0;
 
-  if ((!has_rgb_mode && has_rgb_values) || has_rgb_mode && !has_rgb_values) {
+  if ((!has_rgb_mode && has_rgb_values) || (has_rgb_mode && !has_rgb_values)) {
     red = green = blue = 0;
     color_brightness - 0;
     color_mode = (light::ColorMode)(static_cast<uint8_t>(color_mode) ^ static_cast<uint8_t>(light::ColorCapability::RGB));
