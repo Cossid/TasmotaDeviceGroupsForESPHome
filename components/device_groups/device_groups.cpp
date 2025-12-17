@@ -64,60 +64,64 @@ void device_groups::setup() {
   for (light::LightState *obj : this->lights_) {
     set_light_intial_values(obj);
 
-    obj->add_new_remote_values_callback([this, obj]() {
-      bool power_state;
-      float brightness, color_brightness, red, green, blue, cold_white, warm_white;
-      esphome::light::ColorMode color_mode;
-
-      get_light_values(obj, power_state, brightness, color_brightness, red, green, blue, cold_white, warm_white, color_mode);
-
-      if (power_state != previous_power_state) {
-        ExecuteCommandPower(1, power_state, SRC_LIGHT);
-      }
-
-      if (power_state != previous_power_state
-          ||red != previous_red
-          || green != previous_green
-          || blue != previous_blue
-          || warm_white != previous_warm_white
-          || cold_white != previous_cold_white
-          || brightness != previous_brightness
-          || color_brightness != previous_color_brightness
-          || color_mode != previous_color_mode
-      ) {
-        uint8_t light_channels[6] = {
-          (uint8_t)(red * 255),
-          (uint8_t)(green * 255),
-          (uint8_t)(blue * 255),
-          (uint8_t)(cold_white * 255),
-          (uint8_t)(warm_white * 255),
-          0
-        };
-
-        SendDeviceGroupMessage(1, (DevGroupMessageType) (DGR_MSGTYP_UPDATE),
-                              DGR_ITEM_LIGHT_CHANNELS, light_channels);
-      }
-
-      if (brightness != previous_brightness) {
-        SendDeviceGroupMessage(1, (DevGroupMessageType) (DGR_MSGTYP_UPDATE + DGR_MSGTYPFLAG_WITH_LOCAL),
-                              DGR_ITEM_LIGHT_BRI, (uint8_t)(brightness * 255));
-      }
-
-      previous_power_state = power_state;
-      previous_brightness = brightness;
-      previous_color_brightness = color_brightness;
-      previous_red = red;
-      previous_green = green;
-      previous_blue = blue;
-      previous_cold_white = cold_white;
-      previous_warm_white = warm_white;
-      previous_color_mode = color_mode;
-    });
+    obj->add_remote_values_listener(this);
   }
 #endif
 }
 
 #ifdef USE_LIGHT
+void device_groups::on_light_remote_values_update() {
+  for (light::LightState *obj : this->lights_) {
+    bool power_state;
+    float brightness, color_brightness, red, green, blue, cold_white, warm_white;
+    esphome::light::ColorMode color_mode;
+
+    get_light_values(obj, power_state, brightness, color_brightness, red, green, blue, cold_white, warm_white, color_mode);
+
+    if (power_state != previous_power_state) {
+    ExecuteCommandPower(1, power_state, SRC_LIGHT);
+    }
+
+    if (power_state != previous_power_state
+      ||red != previous_red
+      || green != previous_green
+      || blue != previous_blue
+      || warm_white != previous_warm_white
+      || cold_white != previous_cold_white
+      || brightness != previous_brightness
+      || color_brightness != previous_color_brightness
+      || color_mode != previous_color_mode
+    ) {
+    uint8_t light_channels[6] = {
+      (uint8_t)(red * 255),
+      (uint8_t)(green * 255),
+      (uint8_t)(blue * 255),
+      (uint8_t)(cold_white * 255),
+      (uint8_t)(warm_white * 255),
+      0
+    };
+
+    SendDeviceGroupMessage(1, (DevGroupMessageType) (DGR_MSGTYP_UPDATE),
+                          DGR_ITEM_LIGHT_CHANNELS, light_channels);
+    }
+
+    if (brightness != previous_brightness) {
+    SendDeviceGroupMessage(1, (DevGroupMessageType) (DGR_MSGTYP_UPDATE + DGR_MSGTYPFLAG_WITH_LOCAL),
+                          DGR_ITEM_LIGHT_BRI, (uint8_t)(brightness * 255));
+    }
+
+    previous_power_state = power_state;
+    previous_brightness = brightness;
+    previous_color_brightness = color_brightness;
+    previous_red = red;
+    previous_green = green;
+    previous_blue = blue;
+    previous_cold_white = cold_white;
+    previous_warm_white = warm_white;
+    previous_color_mode = color_mode;
+  }
+}
+
 void device_groups::get_light_values(light::LightState *obj, bool &power_state, float &brightness, float &color_brightness, float &red, float &green, float &blue, float &cold_white, float &warm_white, esphome::light::ColorMode &color_mode) {
   power_state = obj->remote_values.is_on();
   brightness = obj->remote_values.get_brightness();

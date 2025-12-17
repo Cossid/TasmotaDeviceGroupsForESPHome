@@ -268,7 +268,11 @@ static std::vector<std::string> registered_group_names{};
 static uint32_t packetId = 0;
 #endif
 
+#if defined(USE_LIGHT)
+class device_groups : public Component, public light::LightRemoteValuesListener {
+#else
 class device_groups : public Component {
+#endif
  public:
   void register_device_group_name(std::string group_name) { this->device_group_name_ = std::move(group_name); }
 #ifdef USE_SWITCH
@@ -276,6 +280,8 @@ class device_groups : public Component {
 #endif
 #ifdef USE_LIGHT
   void register_lights(const std::vector<light::LightState *> &lights) { this->lights_ = lights; }
+  // LightRemoteValuesListener interface
+  void on_light_remote_values_update() override;
 #endif
   void register_send_mask(uint32_t send_mask) { this->send_mask_ = send_mask; }
   void register_receive_mask(uint32_t receive_mask) { this->receive_mask_ = receive_mask; }
