@@ -200,7 +200,7 @@ void device_groups::dump_config() {
     ESP_LOGCONFIG(TAG, " - No switches mapped");
   } else {
     for (switch_::Switch *obj : this->switches_) {
-      ESP_LOGCONFIG(TAG, " - %s (%s)", obj->get_object_id().c_str(), obj->get_name().c_str());
+      ESP_LOGCONFIG(TAG, " - %s", obj->get_name().c_str());
     }
   }
 #else
@@ -212,7 +212,7 @@ void device_groups::dump_config() {
     ESP_LOGCONFIG(TAG, " - No lights mapped");
   } else {
     for (light::LightState *obj : this->lights_) {
-      ESP_LOGCONFIG(TAG, " - %s (%s)", obj->get_object_id().c_str(), obj->get_name().c_str());
+      ESP_LOGCONFIG(TAG, " - %s", obj->get_name().c_str());
     }
   }
 #else
