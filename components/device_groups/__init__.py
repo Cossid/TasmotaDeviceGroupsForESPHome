@@ -37,6 +37,9 @@ async def to_code(config):
     cg.add(var.register_device_group_name(str(config[CONF_GROUP_NAME])))
     cg.add(var.register_send_mask(config[CONF_SEND_MASK]))
     cg.add(var.register_receive_mask(config[CONF_RECEIVE_MASK]))
+    
+    if CORE.is_esp32 and CORE.using_arduino:
+        cg.add_library("WiFi", None)
 
     if CONF_SWITCHES in config:
         switches = []
