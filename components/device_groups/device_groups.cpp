@@ -239,6 +239,10 @@ void device_groups::loop() {
   if (dgr_state == DGR_STATE_UNINTIALIZED) {
     dgr_state = DGR_STATE_INITIALIZING;
     InitTasmotaCompatibility();
+    if (Settings == nullptr) {
+      dgr_state = DGR_STATE_UNINTIALIZED;
+      return;
+    }
     // DeviceGroupsInit(); // automatically called by DeviceGrupsStart()
     if (DeviceGroupsStart()) {
       dgr_state = DGR_STATE_INITIALIZED;
@@ -384,7 +388,7 @@ void device_groups::SendReceiveDeviceGroupMessage(struct device_group *device_gr
   flags |= *message_ptr++ << 8;
 
   // Initialize the log buffer.
-  char *log_buffer = (char *) malloc(512);
+  char log_buffer[512];
   log_length = sprintf(log_buffer, PSTR("%s %s message %s %s: seq=%u, flags=%u"),
                        (received ? PSTR("Received") : PSTR("Sending")), device_group->group_name,
                        (received ? PSTR("from") : PSTR("to")),
@@ -800,7 +804,6 @@ badmsg:
   ESP_LOGE(TAG, "%s ** incorrect length", log_buffer);
 
 cleanup:
-  free(log_buffer);
   if (received) {
     TasmotaGlobal.skip_light_fade = false;
     ignore_dgr_sends = false;
@@ -1369,9 +1372,9 @@ void device_groups::DeviceGroupsLoop(void) {
                 // they're offline and remove them from the group.
                 if ((int32_t) (now - device_group->member_timeout_time) >= 0) {
                   *flink = device_group_member->flink;
-                  free(device_group_member);
                   ESP_LOGD(TAG, "%s Member %s removed", device_group->group_name,
                            IPAddressToString(device_group_member->ip_address));
+                  free(device_group_member);
                   continue;
                 }
 
@@ -1492,7 +1495,14 @@ void device_groups::ExecuteCommandPower(uint32_t device, uint32_t state, uint32_
 void device_groups::ExecuteCommand(const char *cmnd, uint32_t source) { return; }
 
 void device_groups::InitTasmotaCompatibility() {
-  Settings = (TSettings *) malloc(sizeof(TSettings));
+  // Allocate once; this is called on every (re)connect.
+  if (Settings == nullptr) {
+    Settings = (TSettings *) calloc(1, sizeof(TSettings));
+    if (Settings == nullptr) {
+      ESP_LOGE(TAG, "Error allocating settings");
+      return;
+    }
+  }
   Settings->device_group_share_in = receive_mask_;
   Settings->device_group_share_out = send_mask_;
   Settings->flag4.device_groups_enabled = 1;
