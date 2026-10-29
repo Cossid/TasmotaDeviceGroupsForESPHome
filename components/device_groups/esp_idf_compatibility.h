@@ -1,7 +1,7 @@
 #ifndef ESP_IDF_COMPATIBILITY_H
 #define ESP_IDF_COMPATIBILITY_H
 
-#if defined(USE_ESP_IDF)
+#if defined(USE_ESP_IDF) && !defined(USE_ARDUINO)
 
 // ESP-IDF compatibility for Arduino PROGMEM functions
 #define PSTR(str) (str)

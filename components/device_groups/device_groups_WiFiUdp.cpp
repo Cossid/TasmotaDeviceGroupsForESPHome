@@ -1,4 +1,4 @@
-#if defined(USE_ESP_IDF)
+#if defined(USE_ESP_IDF) && !defined(USE_ARDUINO)
 
 #include "device_groups_WiFiUdp.h"
 #include <fcntl.h>
